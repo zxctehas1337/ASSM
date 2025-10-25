@@ -1,4 +1,4 @@
-# Assm - Modern Web Messenger
+# Assm - Modern Web Messenger````````````````````````````````````````````````````
 
 ## Project Overview
 Assm is a modern, minimalist real-time messaging application built with React, TypeScript, Express, and WebSocket technology. The application features secure authentication, customizable user profiles, and instant message delivery.
