@@ -1,0 +1,94 @@
+import { type User, type InsertUser, type Message, type InsertMessage } from "@shared/schema";
+import { randomUUID } from "crypto";
+
+export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByNickname(nickname: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Message operations
+  createMessage(message: InsertMessage): Promise<Message>;
+  getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<string, User>;
+  private messages: Map<string, Message>;
+
+  constructor() {
+    this.users = new Map();
+    this.messages = new Map();
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
+  }
+
+  async getUserByNickname(nickname: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.nickname === nickname,
+    );
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = randomUUID();
+    const user: User = { 
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      nickname: insertUser.nickname || insertUser.username, // Default to username if no nickname
+      avatarColor: insertUser.avatarColor || '#2196F3',
+      theme: insertUser.theme || 'light',
+      profileSetupComplete: insertUser.profileSetupComplete || false,
+      createdAt: new Date(),
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const id = randomUUID();
+    const message: Message = {
+      ...insertMessage,
+      id,
+      timestamp: new Date(),
+    };
+    this.messages.set(id, message);
+    return message;
+  }
+
+  async getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter(
+        (msg) =>
+          (msg.senderId === userId1 && msg.recipientId === userId2) ||
+          (msg.senderId === userId2 && msg.recipientId === userId1)
+      )
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+}
+
+export const storage = new MemStorage();
