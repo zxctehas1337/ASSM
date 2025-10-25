@@ -245,19 +245,22 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
     switch (message.type) {
       case 'call_offer':
         if (message.fromUserId && message.offer) {
-          // Initialize peer connection for incoming call
-          const peerConnection = initializePeerConnection();
-          await peerConnection.setRemoteDescription(message.offer);
-          
-          // Find the calling user from the users list
-          const callingUser = users?.find(u => u.id === message.fromUserId);
-          
-          setCallState(prev => ({
-            ...prev,
-            isInCall: true,
-            callType: 'incoming',
-            otherUser: callingUser || { id: message.fromUserId } as User
-          }));
+          // Only set to incoming if not already in an outgoing call
+          if (callState.callType !== 'outgoing') {
+            // Initialize peer connection for incoming call
+            const peerConnection = initializePeerConnection();
+            await peerConnection.setRemoteDescription(message.offer);
+            
+            // Find the calling user from the users list
+            const callingUser = users?.find(u => u.id === message.fromUserId);
+            
+            setCallState(prev => ({
+              ...prev,
+              isInCall: true,
+              callType: 'incoming',
+              otherUser: callingUser || { id: message.fromUserId } as User
+            }));
+          }
         }
         break;
 
@@ -282,7 +285,7 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
         endCall();
         break;
     }
-  }, [initializePeerConnection, endCall]);
+  }, [initializePeerConnection, endCall, callState.callType]);
 
   return {
     callState,

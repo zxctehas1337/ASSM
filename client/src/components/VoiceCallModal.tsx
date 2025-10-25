@@ -71,6 +71,9 @@ export default function VoiceCallModal({
     if (callType === 'active') {
       return formatTime(timeElapsed);
     }
+    if (callType === 'incoming') {
+      return otherUser ? `${otherUser.nickname} is calling` : 'Incoming Call';
+    }
     return otherUser ? `Calling ${otherUser.nickname}` : 'Connecting...';
   };
 
