@@ -82,6 +82,34 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
   // Start outgoing call
   const startCall = useCallback(async (user: User) => {
     try {
+      // Check user availability via WebSocket
+      if (wsRef.current) {
+        const isAvailable = await new Promise<boolean>((resolve) => {
+          const timeoutId = setTimeout(() => resolve(false), 5000);
+          
+          wsRef.current?.send(JSON.stringify({
+            type: 'check_user_availability',
+            targetUserId: user.id
+          }));
+
+          const availabilityHandler = (event: MessageEvent) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'user_availability' && message.userId === user.id) {
+              clearTimeout(timeoutId);
+              wsRef.current?.removeEventListener('message', availabilityHandler);
+              resolve(message.available);
+            }
+          };
+
+          wsRef.current?.addEventListener('message', availabilityHandler);
+        });
+
+        if (!isAvailable) {
+          alert('User is not currently available for calls.');
+          return;
+        }
+      }
+
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: true, 
@@ -98,9 +126,17 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
         peerConnection.addTrack(track, stream);
       });
 
+      // Create offer with timeout
+      const offerCreationTimeout = setTimeout(() => {
+        endCall();
+        alert('Call setup timed out. Please try again.');
+      }, 15000);
+
       // Create offer
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
+
+      clearTimeout(offerCreationTimeout);
 
       // Send offer through WebSocket
       if (wsRef.current) {
@@ -122,7 +158,8 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
 
     } catch (error) {
       console.error('Failed to start call:', error);
-      alert('Failed to access microphone. Please check permissions.');
+      alert('Failed to start call. Please check microphone permissions and network connection.');
+      endCall();
     }
   }, [initializePeerConnection, wsRef]);
 

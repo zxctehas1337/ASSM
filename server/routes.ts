@@ -37,9 +37,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const connectedClients = new Map<string, WebSocket>();
 
+  // Add a new route for full user sync
+  app.get("/api/users/sync", authenticate, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const sanitizedUsers = users.map(({ password, ...user }) => user);
+      res.json(sanitizedUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync users" });
+    }
+  });
+
+  // Modify existing WebSocket connection to periodically sync users
   wss.on('connection', (ws, req) => {
     let userId: string | null = null;
     let isAuthenticated = false;
+    let userSyncInterval: NodeJS.Timeout | null = null;
 
     ws.on('message', (data) => {
       try {
@@ -110,6 +123,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('close', () => {
       if (userId) {
         connectedClients.delete(userId);
+        
+        // Clear sync interval
+        if (userSyncInterval) {
+          clearInterval(userSyncInterval);
+        }
       }
     });
   });
