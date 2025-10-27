@@ -113,16 +113,19 @@ export default function SettingsPage() {
     
     if (selectedTheme !== currentUser?.theme) {
       updates.theme = selectedTheme;
+      // Remove all theme classes first
+      document.documentElement.classList.remove("dark", "monokai", "nord", "light");
+      
+      // Add the selected theme class
       if (selectedTheme === "dark") {
         document.documentElement.classList.add("dark");
       } else if (selectedTheme === "monokai") {
         document.documentElement.classList.add("monokai");
-        document.documentElement.classList.remove("dark", "nord");
       } else if (selectedTheme === "nord") {
         document.documentElement.classList.add("nord");
-        document.documentElement.classList.remove("dark", "monokai");
       } else {
-        document.documentElement.classList.remove("dark", "monokai", "nord");
+        // Default to light theme
+        document.documentElement.classList.add("light");
       }
     }
 
