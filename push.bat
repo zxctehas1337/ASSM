@@ -1,5 +1,5 @@
 @echo off
-set /a $RANDON
+$RANDON
 git add .
 git commit -m "Fix $RANDOM"
 git push
