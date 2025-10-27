@@ -35,9 +35,16 @@ export default function ProfileSetup() {
     }
   }, [setLocation]);
 
+  const handleNicknameChange = (value: string) => {
+    // Limit nickname length to 20 characters
+    if (value.length <= 20) {
+      setNickname(value);
+    }
+  };
+
   useEffect(() => {
     const checkNickname = async () => {
-      if (nickname.length < 2) {
+      if (nickname.length < 3) {
         setNicknameStatus("idle");
         return;
       }
@@ -111,10 +118,11 @@ export default function ProfileSetup() {
                 id="nickname"
                 type="text"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Choose a display name"
+                onChange={(e) => handleNicknameChange(e.target.value)}
+                placeholder="Choose a display name (2-20 characters)"
                 className="pr-10"
                 data-testid="input-nickname-setup"
+                maxLength={20}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isCheckingNickname && (
@@ -128,6 +136,9 @@ export default function ProfileSetup() {
                 )}
               </div>
             </div>
+            {nickname.length > 20 && (
+              <p className="text-sm text-destructive">Nickname must be 20 characters or less</p>
+            )}
             {nicknameStatus === "available" && (
               <p className="text-sm text-green-600">This nickname is available</p>
             )}
@@ -144,6 +155,7 @@ export default function ProfileSetup() {
                 className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-semibold transition-all duration-300 shadow-lg"
                 style={{ backgroundColor: selectedColor }}
               >
+<<<<<<< HEAD
                 {(nickname || "").trim()
                   ? (() => {
                       const parts = nickname.trim().split(/\s+/).filter(Boolean);
@@ -154,6 +166,9 @@ export default function ProfileSetup() {
                       return nickname.trim().slice(0, 3).toUpperCase();
                     })()
                   : "AAA"}
+=======
+                {nickname ? nickname.slice(0, 3).toUpperCase() : "AAA"}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
               </div>
             </div>
 
@@ -187,7 +202,7 @@ export default function ProfileSetup() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || (nickname && nicknameStatus !== "available")}
+            disabled={isLoading || !!(nickname && nicknameStatus !== "available")}
             data-testid="button-continue"
           >
             {isLoading ? "Setting up..." : "Continue to Messenger"}

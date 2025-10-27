@@ -254,7 +254,11 @@ export default function ChatPage() {
               <>
                 <Avatar className="w-10 h-10" style={{ backgroundColor: currentUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
+<<<<<<< HEAD
                     {getInitials(currentUser.nickname, currentUser.username)}
+=======
+                    {currentUser.nickname.slice(0, 3).toUpperCase()}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -302,7 +306,11 @@ export default function ChatPage() {
               >
                 <Avatar className="w-12 h-12" style={{ backgroundColor: user.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold text-lg">
+<<<<<<< HEAD
                     {getInitials(user.nickname, user.username)}
+=======
+                    {user.nickname.slice(0, 3).toUpperCase()}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
@@ -324,7 +332,11 @@ export default function ChatPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10" style={{ backgroundColor: selectedUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
+<<<<<<< HEAD
                     {getInitials(selectedUser.nickname, selectedUser.username)}
+=======
+                    {selectedUser.nickname.slice(0, 3).toUpperCase()}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
                   </AvatarFallback>
                 </Avatar>
                 <div>

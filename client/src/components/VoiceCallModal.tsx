@@ -100,7 +100,11 @@ export default function VoiceCallModal({
           <div className="relative">
             <Avatar className="w-24 h-24" style={{ backgroundColor: otherUser?.avatarColor }}>
               <AvatarFallback className="text-white font-semibold text-2xl">
+<<<<<<< HEAD
                 {getInitials(otherUser?.nickname, otherUser?.username)}
+=======
+                {otherUser?.nickname.slice(0, 3).toUpperCase()}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
               </AvatarFallback>
             </Avatar>
             {callType === 'active' && (

@@ -36,9 +36,24 @@ AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback> & {
+    nickname?: string;
+    letterCount?: number;
+  }
+>(({ className, nickname, letterCount = 3, ...props }, ref) => {
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
+
+  // Function to get initials
+  const getInitials = (name?: string) => {
+    if (!name) return '';
+    // Split by spaces and take first 3 words, then take first letter of each
+    const words = name.trim().split(/\s+/);
+    return words
+      .slice(0, letterCount)
+      .map(word => word[0].toUpperCase())
+      .join('')
+      .substring(0, letterCount);
+  };
 
   useEffect(() => {
     // Retrieve avatar color from local storage or user profile
@@ -50,7 +65,7 @@ const AvatarFallback = React.forwardRef<
     <AvatarPrimitive.Fallback
       ref={ref}
       className={cn(
-        "flex h-full w-full items-center justify-center rounded-full",
+        "flex h-full w-full items-center justify-center rounded-full text-white text-sm font-medium",
         // Base styles for both light and dark themes
         "bg-opacity-30 dark:bg-opacity-50",
         // Fallback muted background if no color is set
@@ -65,7 +80,11 @@ const AvatarFallback = React.forwardRef<
       }}
       {...props}
     >
+<<<<<<< HEAD
       {props.children}
+=======
+      {getInitials(nickname)}
+>>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
     </AvatarPrimitive.Fallback>
   );
 });
