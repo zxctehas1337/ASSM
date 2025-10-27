@@ -155,7 +155,6 @@ export default function ProfileSetup() {
                 className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-semibold transition-all duration-300 shadow-lg"
                 style={{ backgroundColor: selectedColor }}
               >
-<<<<<<< HEAD
                 {(nickname || "").trim()
                   ? (() => {
                       const parts = nickname.trim().split(/\s+/).filter(Boolean);
@@ -166,9 +165,6 @@ export default function ProfileSetup() {
                       return nickname.trim().slice(0, 3).toUpperCase();
                     })()
                   : "AAA"}
-=======
-                {nickname ? nickname.slice(0, 3).toUpperCase() : "AAA"}
->>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
               </div>
             </div>
 

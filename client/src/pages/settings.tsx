@@ -167,7 +167,6 @@ export default function SettingsPage() {
           <div className="flex items-center gap-6">
             <Avatar className="w-20 h-20" style={{ backgroundColor: selectedColor }}>
               <AvatarFallback className="text-white font-semibold text-2xl">
-<<<<<<< HEAD
                 {(nickname || "").trim()
                   ? (() => {
                       const parts = nickname.trim().split(/\s+/).filter(Boolean);
@@ -178,9 +177,6 @@ export default function SettingsPage() {
                       return nickname.trim().slice(0, 3).toUpperCase();
                     })()
                   : "AAA"}
-=======
-                {nickname.slice(0, 3).toUpperCase() || "AAA"}
->>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">

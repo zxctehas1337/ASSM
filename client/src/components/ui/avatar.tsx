@@ -80,11 +80,7 @@ const AvatarFallback = React.forwardRef<
       }}
       {...props}
     >
-<<<<<<< HEAD
       {props.children}
-=======
-      {getInitials(nickname)}
->>>>>>> 728d8c20414b35e3e978f94a68fb312ffddf9537
     </AvatarPrimitive.Fallback>
   );
 });
