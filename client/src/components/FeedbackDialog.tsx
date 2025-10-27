@@ -43,9 +43,8 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
       onOpenChange?.(false);
       
       // Redirect to Telegram bot after a short delay
-      // Replace 'your_bot_username' with your actual bot username
       setTimeout(() => {
-        const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "your_bot_username";
+        const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "@ASSM_support_bot";
         window.open(`https://t.me/${botUsername}`, "_blank");
       }, 1500);
     },
