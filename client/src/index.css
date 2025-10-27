@@ -233,47 +233,6 @@
 }
 
 /* Custom Theme Styles */
-.monokai {
-  --background: #272822;
-  --foreground: #F8F8F2;
-  --primary: #A6E22E;
-  --primary-foreground: #000;
-  --secondary: #66D9EF;
-  --secondary-foreground: #000;
-  --accent: #F92672;
-  --accent-foreground: #FFF;
-  --destructive: #F83535;
-  --destructive-foreground: #FFF;
-  --muted: #75715E;
-  --muted-foreground: #FFF;
-  --card: #1E1F1C;
-  --card-foreground: #F8F8F2;
-  --popover: #1E1F1C;
-  --popover-foreground: #F8F8F2;
-  --input: #3E4444;
-  --border: #3E4444;
-}
-
-.nord {
-  --background: #2E3440;
-  --foreground: #D8DEE9;
-  --primary: #81A1C1;
-  --primary-foreground: #FFF;
-  --secondary: #88C0D0;
-  --secondary-foreground: #000;
-  --accent: #A3BE8C;
-  --accent-foreground: #000;
-  --destructive: #BF616A;
-  --destructive-foreground: #FFF;
-  --muted: #4C566A;
-  --muted-foreground: #FFF;
-  --card: #3B4252;
-  --card-foreground: #D8DEE9;
-  --popover: #3B4252;
-  --popover-foreground: #D8DEE9;
-  --input: #434C5E;
-  --border: #434C5E;
-}
 
 @layer base {
   * {

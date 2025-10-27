@@ -25,8 +25,6 @@ const AVATAR_COLORS = [
 const THEMES = [
   { name: "Light", value: "light" },
   { name: "Dark", value: "dark" },
-  { name: "Monokai", value: "monokai" },
-  { name: "Nord", value: "nord" },
 ];
 
 export default function SettingsPage() {
@@ -121,15 +119,11 @@ export default function SettingsPage() {
     if (selectedTheme !== currentUser?.theme) {
       updates.theme = selectedTheme;
       // Remove all theme classes first
-      document.documentElement.classList.remove("dark", "monokai", "nord", "light");
+      document.documentElement.classList.remove("dark", "light");
       
       // Add the selected theme class
       if (selectedTheme === "dark") {
         document.documentElement.classList.add("dark");
-      } else if (selectedTheme === "monokai") {
-        document.documentElement.classList.add("monokai");
-      } else if (selectedTheme === "nord") {
-        document.documentElement.classList.add("nord");
       } else {
         // Default to light theme
         document.documentElement.classList.add("light");
@@ -271,15 +265,11 @@ export default function SettingsPage() {
                 <div className="mt-3 h-16 rounded-md border overflow-hidden">
                   <div className={`h-full ${
                     theme.value === "dark" ? "bg-gray-900" : 
-                    theme.value === "light" ? "bg-white" :
-                    theme.value === "monokai" ? "bg-[#272822]" : 
-                    theme.value === "nord" ? "bg-[#2E3440]" : "bg-white"
+                    theme.value === "light" ? "bg-white" : "bg-white"
                   }`}>
                     <div className={`h-2 ${
                       theme.value === "dark" ? "bg-gray-800" : 
-                      theme.value === "light" ? "bg-gray-100" :
-                      theme.value === "monokai" ? "bg-[#1E1F1C]" : 
-                      theme.value === "nord" ? "bg-[#3B4252]" : "bg-gray-100"
+                      theme.value === "light" ? "bg-gray-100" : "bg-gray-100"
                     }`} />
                   </div>
                 </div>
