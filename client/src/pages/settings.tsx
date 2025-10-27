@@ -65,7 +65,7 @@ export default function SettingsPage() {
     }
 
     const checkNickname = async () => {
-      if (nickname.length < 2) {
+      if (nickname.length < 3) {
         setNicknameStatus("idle");
         return;
       }
@@ -149,7 +149,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-6">
             <Avatar className="w-20 h-20" style={{ backgroundColor: selectedColor }}>
               <AvatarFallback className="text-white font-semibold text-2xl">
-                {nickname.slice(0, 2).toUpperCase() || "AA"}
+                {nickname.slice(0, 3).toUpperCase() || "AAA"}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">

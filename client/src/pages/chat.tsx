@@ -242,7 +242,7 @@ export default function ChatPage() {
               <>
                 <Avatar className="w-10 h-10" style={{ backgroundColor: currentUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
-                    {currentUser.nickname.slice(0, 2).toUpperCase()}
+                    {currentUser.nickname.slice(0, 3).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -290,7 +290,7 @@ export default function ChatPage() {
               >
                 <Avatar className="w-12 h-12" style={{ backgroundColor: user.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold text-lg">
-                    {user.nickname.slice(0, 2).toUpperCase()}
+                    {user.nickname.slice(0, 3).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
@@ -312,7 +312,7 @@ export default function ChatPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10" style={{ backgroundColor: selectedUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
-                    {selectedUser.nickname.slice(0, 2).toUpperCase()}
+                    {selectedUser.nickname.slice(0, 3).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>

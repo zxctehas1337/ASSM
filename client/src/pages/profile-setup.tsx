@@ -37,7 +37,7 @@ export default function ProfileSetup() {
 
   useEffect(() => {
     const checkNickname = async () => {
-      if (nickname.length < 2) {
+      if (nickname.length < 3) {
         setNicknameStatus("idle");
         return;
       }
@@ -144,7 +144,7 @@ export default function ProfileSetup() {
                 className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-semibold transition-all duration-300 shadow-lg"
                 style={{ backgroundColor: selectedColor }}
               >
-                {nickname ? nickname.slice(0, 2).toUpperCase() : "AA"}
+                {nickname ? nickname.slice(0, 3).toUpperCase() : "AAA"}
               </div>
             </div>
 
@@ -178,7 +178,7 @@ export default function ProfileSetup() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || (nickname && nicknameStatus !== "available")}
+            disabled={isLoading || (!!nickname && nicknameStatus !== "available")}
             data-testid="button-continue"
           >
             {isLoading ? "Setting up..." : "Continue to Messenger"}

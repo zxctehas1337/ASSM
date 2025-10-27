@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ available: true });
       }
 
-      if (nickname.length < 2) {
+      if (nickname.length < 3 || nickname.length > 17) {
         return res.json({ available: false });
       }
 
