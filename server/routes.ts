@@ -5,9 +5,11 @@ import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 
 interface AuthRequest {
   userId?: string;
@@ -566,6 +568,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ unreadBySender });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch unread messages by sender" });
+    }
+  });
+
+  // Helper function to send feedback to Telegram
+  const sendFeedbackToTelegram = async (user: any, subject: string, message: string) => {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      console.warn("Telegram credentials not configured");
+      return;
+    }
+
+    try {
+      const telegramMessage = `
+📧 <b>New Feedback</b>
+
+👤 <b>User:</b> ${user.nickname || user.username}
+🆔 <b>Username:</b> @${user.username}
+
+📌 <b>Subject:</b> ${subject}
+
+💬 <b>Message:</b>
+${message}
+
+⏰ <b>Time:</b> ${new Date().toLocaleString()}
+      `.trim();
+
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: telegramMessage,
+          parse_mode: "HTML",
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to send Telegram message:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error sending feedback to Telegram:", error);
+    }
+  };
+
+  // Feedback Routes
+  app.post("/api/feedback", authenticate, async (req: any, res) => {
+    try {
+      const data = insertFeedbackSchema.parse({
+        userId: req.userId,
+        subject: req.body.subject,
+        message: req.body.message,
+      });
+
+      const feedback = await storage.createFeedback(data);
+
+      // Get user info for Telegram message
+      const user = await storage.getUser(req.userId);
+      if (user) {
+        await sendFeedbackToTelegram(user, data.subject, data.message);
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Feedback sent successfully",
+        feedbackId: feedback.id 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to send feedback" });
+    }
+  });
+
+  app.get("/api/feedback", authenticate, async (req: any, res) => {
+    try {
+      const allFeedback = await storage.getAllFeedback();
+      res.json(allFeedback);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch feedback" });
     }
   });
 

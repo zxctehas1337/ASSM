@@ -23,6 +23,15 @@ export const messages = pgTable("messages", {
   isRead: boolean("is_read").notNull().default(false),
 });
 
+export const feedback = pgTable("feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  status: text("status").notNull().default('pending'),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -48,9 +57,17 @@ export const updateProfileSchema = z.object({
   theme: z.string().optional(),
 });
 
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  timestamp: true,
+  status: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type LoginData = z.infer<typeof loginSchema>;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Feedback = typeof feedback.$inferSelect;

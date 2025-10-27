@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Message, type InsertMessage } from "@shared/schema";
+import { type User, type InsertUser, type Message, type InsertMessage, type Feedback, type InsertFeedback } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -17,15 +17,21 @@ export interface IStorage {
   markMessagesAsRead(messageIds: string[]): Promise<void>;
   getUnreadCount(userId: string): Promise<number>;
   getUnreadMessages(userId: string): Promise<Message[]>;
+  
+  // Feedback operations
+  createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  getAllFeedback(): Promise<Feedback[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private messages: Map<string, Message>;
+  private feedbacks: Map<string, Feedback>;
 
   constructor() {
     this.users = new Map();
     this.messages = new Map();
+    this.feedbacks = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -123,6 +129,22 @@ export class MemStorage implements IStorage {
     return Array.from(this.messages.values()).filter(
       (msg) => msg.recipientId === userId && !msg.isRead
     );
+  }
+
+  async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
+    const id = randomUUID();
+    const feedback: Feedback = {
+      ...insertFeedback,
+      id,
+      timestamp: new Date(),
+      status: 'pending',
+    };
+    this.feedbacks.set(id, feedback);
+    return feedback;
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return Array.from(this.feedbacks.values());
   }
 }
 

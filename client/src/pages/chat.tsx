@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Phone, Settings as SettingsIcon, Send, LogOut } from "lucide-react";
 import type { User, Message } from "@shared/schema";
 import VoiceCallModal from "@/components/VoiceCallModal";
+import FeedbackDialog from "@/components/FeedbackDialog";
 import { useVoiceCall, type WebRTCSignalingMessage } from "@/hooks/useVoiceCall";
 
 export default function ChatPage() {
@@ -17,6 +18,7 @@ export default function ChatPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -305,6 +307,7 @@ export default function ChatPage() {
             )}
           </div>
           <div className="flex gap-2">
+            <FeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />
             <Button
               variant="ghost"
               size="icon"
