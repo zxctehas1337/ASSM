@@ -25,6 +25,8 @@ const AVATAR_COLORS = [
 const THEMES = [
   { name: "Light", value: "light" },
   { name: "Dark", value: "dark" },
+  { name: "Monokai", value: "monokai" },
+  { name: "Nord", value: "nord" },
 ];
 
 export default function SettingsPage() {
@@ -57,6 +59,13 @@ export default function SettingsPage() {
       }
     }
   }, [currentUser]);
+
+  const handleNicknameChange = (value: string) => {
+    // Limit nickname length to 20 characters
+    if (value.length <= 20) {
+      setNickname(value);
+    }
+  };
 
   useEffect(() => {
     if (nickname === originalNickname) {
@@ -111,10 +120,19 @@ export default function SettingsPage() {
     
     if (selectedTheme !== currentUser?.theme) {
       updates.theme = selectedTheme;
+      // Remove all theme classes first
+      document.documentElement.classList.remove("dark", "monokai", "nord", "light");
+      
+      // Add the selected theme class
       if (selectedTheme === "dark") {
         document.documentElement.classList.add("dark");
+      } else if (selectedTheme === "monokai") {
+        document.documentElement.classList.add("monokai");
+      } else if (selectedTheme === "nord") {
+        document.documentElement.classList.add("nord");
       } else {
-        document.documentElement.classList.remove("dark");
+        // Default to light theme
+        document.documentElement.classList.add("light");
       }
     }
 
@@ -165,10 +183,11 @@ export default function SettingsPage() {
                 id="nickname"
                 type="text"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Your display name"
+                onChange={(e) => handleNicknameChange(e.target.value)}
+                placeholder="Your display name (2-20 characters)"
                 className="pr-10"
                 data-testid="input-nickname-settings"
+                maxLength={20}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isCheckingNickname && (
@@ -182,6 +201,9 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+            {nickname.length > 20 && (
+              <p className="text-sm text-destructive">Nickname must be 20 characters or less</p>
+            )}
             {nickname !== originalNickname && nicknameStatus === "available" && (
               <p className="text-sm text-green-600">This nickname is available</p>
             )}
@@ -238,8 +260,18 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div className="mt-3 h-16 rounded-md border overflow-hidden">
-                  <div className={`h-full ${theme.value === "dark" ? "bg-gray-900" : "bg-white"}`}>
-                    <div className={`h-2 ${theme.value === "dark" ? "bg-gray-800" : "bg-gray-100"}`} />
+                  <div className={`h-full ${
+                    theme.value === "dark" ? "bg-gray-900" : 
+                    theme.value === "light" ? "bg-white" :
+                    theme.value === "monokai" ? "bg-[#272822]" : 
+                    theme.value === "nord" ? "bg-[#2E3440]" : "bg-white"
+                  }`}>
+                    <div className={`h-2 ${
+                      theme.value === "dark" ? "bg-gray-800" : 
+                      theme.value === "light" ? "bg-gray-100" :
+                      theme.value === "monokai" ? "bg-[#1E1F1C]" : 
+                      theme.value === "nord" ? "bg-[#3B4252]" : "bg-gray-100"
+                    }`} />
                   </div>
                 </div>
               </button>

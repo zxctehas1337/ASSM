@@ -26,9 +26,9 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
 }).extend({
-  username: z.string().min(3, "Username must be at least 3 characters").max(17, "Username must be at most 17 characters"),
+  username: z.string().min(3, "Username must be at least 3 characters").max(20),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  nickname: z.string().min(3, "Nickname must be at least 3 characters").max(17, "Nickname must be at most 17 characters").optional(),
+  nickname: z.string().min(2, "Nickname must be at least 2 characters").max(20).optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
@@ -42,7 +42,7 @@ export const loginSchema = z.object({
 });
 
 export const updateProfileSchema = z.object({
-  nickname: z.string().min(3).max(17).optional(),
+  nickname: z.string().min(2).max(20).optional(),
   avatarColor: z.string().optional(),
   theme: z.string().optional(),
 });

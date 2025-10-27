@@ -35,6 +35,13 @@ export default function ProfileSetup() {
     }
   }, [setLocation]);
 
+  const handleNicknameChange = (value: string) => {
+    // Limit nickname length to 20 characters
+    if (value.length <= 20) {
+      setNickname(value);
+    }
+  };
+
   useEffect(() => {
     const checkNickname = async () => {
       if (nickname.length < 3) {
@@ -111,10 +118,11 @@ export default function ProfileSetup() {
                 id="nickname"
                 type="text"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Choose a display name"
+                onChange={(e) => handleNicknameChange(e.target.value)}
+                placeholder="Choose a display name (2-20 characters)"
                 className="pr-10"
                 data-testid="input-nickname-setup"
+                maxLength={20}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isCheckingNickname && (
@@ -128,6 +136,9 @@ export default function ProfileSetup() {
                 )}
               </div>
             </div>
+            {nickname.length > 20 && (
+              <p className="text-sm text-destructive">Nickname must be 20 characters or less</p>
+            )}
             {nicknameStatus === "available" && (
               <p className="text-sm text-green-600">This nickname is available</p>
             )}
@@ -178,7 +189,11 @@ export default function ProfileSetup() {
           <Button
             type="submit"
             className="w-full"
+<<<<<<< HEAD
             disabled={isLoading || (!!nickname && nicknameStatus !== "available")}
+=======
+            disabled={isLoading || !!(nickname && nicknameStatus !== "available")}
+>>>>>>> 6b5287434cbcd6b8a38f80fda54d07984267e765
             data-testid="button-continue"
           >
             {isLoading ? "Setting up..." : "Continue to Messenger"}
