@@ -232,6 +232,27 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* Custom Theme Styles */
+.monokai {
+  --background: #272822;
+  --foreground: #F8F8F2;
+  --primary: #A6E22E;
+  --secondary: #66D9EF;
+  --accent: #F92672;
+  --destructive: #F83535;
+  --muted: #75715E;
+}
+
+.nord {
+  --background: #2E3440;
+  --foreground: #D8DEE9;
+  --primary: #81A1C1;
+  --secondary: #88C0D0;
+  --accent: #A3BE8C;
+  --destructive: #BF616A;
+  --muted: #4C566A;
+}
+
 @layer base {
   * {
     @apply border-border;

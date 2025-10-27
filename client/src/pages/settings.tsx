@@ -25,6 +25,8 @@ const AVATAR_COLORS = [
 const THEMES = [
   { name: "Light", value: "light" },
   { name: "Dark", value: "dark" },
+  { name: "Monokai", value: "monokai" },
+  { name: "Nord", value: "nord" },
 ];
 
 export default function SettingsPage() {
@@ -113,8 +115,14 @@ export default function SettingsPage() {
       updates.theme = selectedTheme;
       if (selectedTheme === "dark") {
         document.documentElement.classList.add("dark");
+      } else if (selectedTheme === "monokai") {
+        document.documentElement.classList.add("monokai");
+        document.documentElement.classList.remove("dark", "nord");
+      } else if (selectedTheme === "nord") {
+        document.documentElement.classList.add("nord");
+        document.documentElement.classList.remove("dark", "monokai");
       } else {
-        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.remove("dark", "monokai", "nord");
       }
     }
 
@@ -238,8 +246,18 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div className="mt-3 h-16 rounded-md border overflow-hidden">
-                  <div className={`h-full ${theme.value === "dark" ? "bg-gray-900" : "bg-white"}`}>
-                    <div className={`h-2 ${theme.value === "dark" ? "bg-gray-800" : "bg-gray-100"}`} />
+                  <div className={`h-full ${
+                    theme.value === "dark" ? "bg-gray-900" : 
+                    theme.value === "light" ? "bg-white" :
+                    theme.value === "monokai" ? "bg-[#272822]" : 
+                    theme.value === "nord" ? "bg-[#2E3440]" : "bg-white"
+                  }`}>
+                    <div className={`h-2 ${
+                      theme.value === "dark" ? "bg-gray-800" : 
+                      theme.value === "light" ? "bg-gray-100" :
+                      theme.value === "monokai" ? "bg-[#1E1F1C]" : 
+                      theme.value === "nord" ? "bg-[#3B4252]" : "bg-gray-100"
+                    }`} />
                   </div>
                 </div>
               </button>

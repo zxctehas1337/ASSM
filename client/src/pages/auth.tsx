@@ -50,6 +50,27 @@ export default function AuthPage() {
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    username: "",
+    password: "",
+  });
+
+  const validateUsername = (username: string) => {
+    if (!username.startsWith("@")) {
+      return "Username must start with @";
+    }
+    const cleanUsername = username.slice(1); // Remove @ prefix
+    if (cleanUsername.length < 3) {
+      return "Username must be at least 3 characters long (excluding @)";
+    }
+    if (cleanUsername.length > 15) {
+      return "Username must not exceed 15 characters (excluding @)";
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+      return "Username can only contain letters, numbers, and underscores";
+    }
+    return "";
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -69,9 +90,20 @@ export default function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    // Validate username
+    const usernameError = validateUsername(formData.username);
+    if (usernameError) {
+      setFormErrors((prev) => ({ ...prev, username: usernameError }));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
-        const response = await apiRequest("POST", "/api/auth/register", formData);
+        const response = await apiRequest("POST", "/api/auth/register", {
+          ...formData,
+          username: formData.username.slice(1), // Remove @ prefix for backend
+        });
         localStorage.setItem("token", response.token);
         localStorage.setItem("userId", response.userId);
         toast({
@@ -81,7 +113,7 @@ export default function AuthPage() {
         setLocation("/profile-setup");
       } else {
         const response = await apiRequest("POST", "/api/auth/login", {
-          username: formData.username,
+          username: formData.username.slice(1), // Remove @ prefix for backend
           password: formData.password,
         });
         localStorage.setItem("token", response.token);
@@ -105,7 +137,13 @@ export default function AuthPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "username") {
+      const usernameError = validateUsername(value);
+      setFormErrors((prev) => ({ ...prev, username: usernameError }));
+    }
   };
 
   return (
@@ -133,9 +171,12 @@ export default function AuthPage() {
                 value={formData.username}
                 onChange={handleChange}
                 className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-white/40"
-                placeholder="Choose a username"
+                placeholder="@username (3-15 characters)"
                 data-testid="input-username"
               />
+              {formErrors.username && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.username}</p>
+              )}
             </div>
 
             <div className="space-y-2">
