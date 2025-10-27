@@ -35,18 +35,12 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Your feedback has been sent! You'll be redirected to Telegram to continue.",
+        description: "Your feedback has been sent successfully! Our team will review it shortly.",
         variant: "default",
       });
       setSubject("");
       setMessage("");
       onOpenChange?.(false);
-      
-      // Redirect to Telegram bot after a short delay
-      setTimeout(() => {
-        const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "@ASSM_support_bot";
-        window.open(`https://t.me/${botUsername}`, "_blank");
-      }, 1500);
     },
     onError: (error: any) => {
       toast({

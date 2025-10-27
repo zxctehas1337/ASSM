@@ -579,19 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const telegramMessage = `
-📧 <b>New Feedback</b>
-
-👤 <b>User:</b> ${user.nickname || user.username}
-🆔 <b>Username:</b> @${user.username}
-
-📌 <b>Subject:</b> ${subject}
-
-💬 <b>Message:</b>
-${message}
-
-⏰ <b>Time:</b> ${new Date().toLocaleString()}
-      `.trim();
+      const telegramMessage = `📧 <b>New Feedback</b>\n\n👤 <b>User:</b> ${user.nickname || user.username}\n🆔 <b>Username:</b> @${user.username}\n\n📌 <b>Subject:</b> ${subject}\n\n💬 <b>Message:</b>\n${message}\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
 
       const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: "POST",
@@ -603,11 +591,18 @@ ${message}
         }),
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        console.error("Failed to send Telegram message:", await response.text());
+        console.error("Failed to send Telegram message:", responseData);
+        return false;
       }
+      
+      console.log("Feedback sent to Telegram successfully:", responseData.result.message_id);
+      return true;
     } catch (error) {
       console.error("Error sending feedback to Telegram:", error);
+      return false;
     }
   };
 
