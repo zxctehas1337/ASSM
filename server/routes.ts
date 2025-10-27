@@ -8,8 +8,8 @@ import { z } from "zod";
 import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8337365337:AAGPyNR_6hbzc-rqM7ggHcIa83L-keLzawE";
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "-1003176535629";
 
 interface AuthRequest {
   userId?: string;
@@ -574,14 +574,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to send feedback to Telegram
   const sendFeedbackToTelegram = async (user: any, subject: string, message: string) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      console.warn("Telegram credentials not configured");
-      return;
+      console.warn("⚠️  Telegram credentials not configured");
+      console.warn("   TELEGRAM_BOT_TOKEN:", TELEGRAM_BOT_TOKEN ? "✓ Set" : "✗ Missing");
+      console.warn("   TELEGRAM_CHAT_ID:", TELEGRAM_CHAT_ID ? "✓ Set" : "✗ Missing");
+      return false;
     }
 
     try {
+      console.log("📤 Sending feedback to Telegram...");
+      console.log("   User:", user.username);
+      console.log("   Subject:", subject);
+      
       const telegramMessage = `📧 <b>New Feedback</b>\n\n👤 <b>User:</b> ${user.nickname || user.username}\n🆔 <b>Username:</b> @${user.username}\n\n📌 <b>Subject:</b> ${subject}\n\n💬 <b>Message:</b>\n${message}\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
 
-      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      console.log("   API URL:", url.replace(TELEGRAM_BOT_TOKEN, "***"));
+      console.log("   Chat ID:", TELEGRAM_CHAT_ID);
+
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -594,14 +604,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const responseData = await response.json();
       
       if (!response.ok) {
-        console.error("Failed to send Telegram message:", responseData);
+        console.error("❌ Failed to send Telegram message:");
+        console.error("   Status:", response.status);
+        console.error("   Error:", responseData.description || responseData.error_code);
+        console.error("   Full response:", JSON.stringify(responseData, null, 2));
         return false;
       }
       
-      console.log("Feedback sent to Telegram successfully:", responseData.result.message_id);
+      const messageId = responseData.result?.message_id;
+      console.log("✅ Feedback sent to Telegram successfully!");
+      console.log("   Message ID:", messageId);
       return true;
     } catch (error) {
-      console.error("Error sending feedback to Telegram:", error);
+      console.error("❌ Error sending feedback to Telegram:", error);
+      if (error instanceof Error) {
+        console.error("   Error message:", error.message);
+        console.error("   Stack:", error.stack);
+      }
       return false;
     }
   };

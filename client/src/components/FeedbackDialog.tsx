@@ -27,12 +27,18 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
 
   const feedbackMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/feedback", {
+      const response = await apiRequest("POST", "/api/feedback", {
         subject,
         message,
       });
+      
+      if (!response.success) {
+        throw new Error(response.message || "Failed to send feedback");
+      }
+      
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
         description: "Your feedback has been sent successfully! Our team will review it shortly.",
@@ -41,11 +47,17 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
       setSubject("");
       setMessage("");
       onOpenChange?.(false);
+      
+      // Log feedback ID for debugging
+      console.log("Feedback sent with ID:", data.feedbackId);
     },
     onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to send feedback";
+      console.error("Feedback error:", errorMessage);
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to send feedback",
+        description: errorMessage,
         variant: "destructive",
       });
     },
