@@ -36,6 +36,17 @@ export default function VoiceCallModal({
 }: VoiceCallModalProps) {
   const [timeElapsed, setTimeElapsed] = useState(0);
 
+  const getInitials = (nickname?: string, username?: string) => {
+    const source = (nickname && nickname.trim()) || (username && username.trim()) || "";
+    if (!source) return "";
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length > 1) {
+      const letters = parts.map(p => p.charAt(0)).join("");
+      return letters.slice(0, 3).toUpperCase();
+    }
+    return source.slice(0, 3).toUpperCase();
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callType === 'active') {
@@ -89,7 +100,7 @@ export default function VoiceCallModal({
           <div className="relative">
             <Avatar className="w-24 h-24" style={{ backgroundColor: otherUser?.avatarColor }}>
               <AvatarFallback className="text-white font-semibold text-2xl">
-                {otherUser?.nickname.slice(0, 2).toUpperCase()}
+                {getInitials(otherUser?.nickname, otherUser?.username)}
               </AvatarFallback>
             </Avatar>
             {callType === 'active' && (

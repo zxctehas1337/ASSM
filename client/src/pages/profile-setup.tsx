@@ -144,7 +144,16 @@ export default function ProfileSetup() {
                 className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-semibold transition-all duration-300 shadow-lg"
                 style={{ backgroundColor: selectedColor }}
               >
-                {nickname ? nickname.slice(0, 2).toUpperCase() : "AA"}
+                {(nickname || "").trim()
+                  ? (() => {
+                      const parts = nickname.trim().split(/\s+/).filter(Boolean);
+                      if (parts.length > 1) {
+                        const letters = parts.map((p) => p.charAt(0)).join("");
+                        return letters.slice(0, 3).toUpperCase();
+                      }
+                      return nickname.trim().slice(0, 3).toUpperCase();
+                    })()
+                  : "AAA"}
               </div>
             </div>
 

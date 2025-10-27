@@ -64,7 +64,9 @@ const AvatarFallback = React.forwardRef<
           document.documentElement.classList.contains('dark') ? '0.7' : '1'})`
       }}
       {...props}
-    />
+    >
+      {props.children}
+    </AvatarPrimitive.Fallback>
   );
 });
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName

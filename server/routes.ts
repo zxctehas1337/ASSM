@@ -113,6 +113,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 fromUserId: userId
               }));
             }
+          } else if (message.type === 'check_user_availability') {
+            const targetUserId = message.targetUserId as string;
+            const available = !!(targetUserId && connectedClients.has(targetUserId));
+            try {
+              ws.send(JSON.stringify({
+                type: 'user_availability',
+                userId: targetUserId,
+                available
+              }));
+            } catch (err) {
+              console.error('Failed to send availability:', err);
+            }
           }
         }
       } catch (error) {

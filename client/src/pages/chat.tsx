@@ -21,6 +21,17 @@ export default function ChatPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const [users, setUsers] = useState<User[]>([]);
 
+  const getInitials = (nickname?: string, username?: string) => {
+    const source = (nickname?.trim() || username?.trim() || "");
+    if (!source) return "";
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (parts.length > 1) {
+      const letters = parts.map((p) => p.charAt(0)).join("");
+      return letters.slice(0, 3).toUpperCase();
+    }
+    return source.slice(0, 3).toUpperCase();
+  };
+
   // Voice calling functionality
   const {
     callState,
@@ -111,13 +122,15 @@ export default function ChatPage() {
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       // Optimistically update the UI
-      const optimisticMessage = {
+      if (!currentUser || !selectedUserId) {
+        throw new Error("Missing current user or selected recipient");
+      }
+      const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
-        senderId: currentUser?.id,
+        senderId: currentUser.id,
         recipientId: selectedUserId,
         content,
-        timestamp: new Date().toISOString(),
-        status: 'sending'
+        timestamp: new Date(),
       };
 
       // Update local state immediately
@@ -134,7 +147,7 @@ export default function ChatPage() {
         // Replace the optimistic message with the actual sent message
         queryClient.setQueryData<Message[]>(["/api/messages", `?recipientId=${selectedUserId}`], 
           (oldMessages = []) => oldMessages.map(msg => 
-            msg.id === optimisticMessage.id ? { ...sentMessage, status: 'sent' } : msg
+            msg.id === optimisticMessage.id ? sentMessage : msg
           )
         );
 
@@ -159,10 +172,9 @@ export default function ChatPage() {
           );
         }
 
+        // Remove the optimistic message on generic error as well
         queryClient.setQueryData<Message[]>(["/api/messages", `?recipientId=${selectedUserId}`], 
-          (oldMessages = []) => oldMessages.map(msg => 
-            msg.id === optimisticMessage.id ? { ...msg, status: 'failed' } : msg
-          )
+          (oldMessages = []) => oldMessages.filter(msg => msg.id !== optimisticMessage.id)
         );
         throw error;
       }
@@ -242,7 +254,7 @@ export default function ChatPage() {
               <>
                 <Avatar className="w-10 h-10" style={{ backgroundColor: currentUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
-                    {currentUser.nickname.slice(0, 2).toUpperCase()}
+                    {getInitials(currentUser.nickname, currentUser.username)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -290,7 +302,7 @@ export default function ChatPage() {
               >
                 <Avatar className="w-12 h-12" style={{ backgroundColor: user.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold text-lg">
-                    {user.nickname.slice(0, 2).toUpperCase()}
+                    {getInitials(user.nickname, user.username)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
@@ -312,7 +324,7 @@ export default function ChatPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10" style={{ backgroundColor: selectedUser.avatarColor }}>
                   <AvatarFallback className="text-white font-semibold">
-                    {selectedUser.nickname.slice(0, 2).toUpperCase()}
+                    {getInitials(selectedUser.nickname, selectedUser.username)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
