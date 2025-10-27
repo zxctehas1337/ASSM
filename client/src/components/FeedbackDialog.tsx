@@ -103,7 +103,7 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
         <DialogHeader>
           <DialogTitle>Send Feedback</DialogTitle>
           <DialogDescription>
-            Help us improve by sharing your feedback. After sending, you'll be redirected to Telegram to continue the conversation.
+            Help us improve by sharing your feedback. After sending this is message will be sent to our support.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
