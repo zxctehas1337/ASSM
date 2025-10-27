@@ -189,11 +189,7 @@ export default function ProfileSetup() {
           <Button
             type="submit"
             className="w-full"
-<<<<<<< HEAD
-            disabled={isLoading || (!!nickname && nicknameStatus !== "available")}
-=======
             disabled={isLoading || !!(nickname && nicknameStatus !== "available")}
->>>>>>> 6b5287434cbcd6b8a38f80fda54d07984267e765
             data-testid="button-continue"
           >
             {isLoading ? "Setting up..." : "Continue to Messenger"}
