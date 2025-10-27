@@ -13,6 +13,10 @@ export interface IStorage {
   // Message operations
   createMessage(message: InsertMessage): Promise<Message>;
   getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]>;
+  markMessageAsRead(messageId: string): Promise<Message | undefined>;
+  markMessagesAsRead(messageIds: string[]): Promise<void>;
+  getUnreadCount(userId: string): Promise<number>;
+  getUnreadMessages(userId: string): Promise<Message[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -75,6 +79,7 @@ export class MemStorage implements IStorage {
       ...insertMessage,
       id,
       timestamp: new Date(),
+      isRead: false,
     };
     this.messages.set(id, message);
     return message;
@@ -88,6 +93,36 @@ export class MemStorage implements IStorage {
           (msg.senderId === userId2 && msg.recipientId === userId1)
       )
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+
+  async markMessageAsRead(messageId: string): Promise<Message | undefined> {
+    const message = this.messages.get(messageId);
+    if (!message) return undefined;
+    
+    const updatedMessage = { ...message, isRead: true };
+    this.messages.set(messageId, updatedMessage);
+    return updatedMessage;
+  }
+
+  async markMessagesAsRead(messageIds: string[]): Promise<void> {
+    for (const messageId of messageIds) {
+      const message = this.messages.get(messageId);
+      if (message) {
+        this.messages.set(messageId, { ...message, isRead: true });
+      }
+    }
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    return Array.from(this.messages.values()).filter(
+      (msg) => msg.recipientId === userId && !msg.isRead
+    ).length;
+  }
+
+  async getUnreadMessages(userId: string): Promise<Message[]> {
+    return Array.from(this.messages.values()).filter(
+      (msg) => msg.recipientId === userId && !msg.isRead
+    );
   }
 }
 

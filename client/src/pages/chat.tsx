@@ -20,6 +20,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const getInitials = (nickname?: string, username?: string) => {
     const source = (nickname?.trim() || username?.trim() || "");
@@ -71,8 +72,18 @@ export default function ChatPage() {
       }
     };
 
+    const fetchUnreadCounts = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/messages/unread/by-sender");
+        setUnreadCounts(response.unreadBySender || {});
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+
     fetchCurrentUser();
     fetchUsers();
+    fetchUnreadCounts();
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -86,6 +97,20 @@ export default function ChatPage() {
       const data = JSON.parse(event.data);
       if (data.type === "message") {
         queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+        // Increment unread count for the sender
+        if (data.message && data.message.senderId) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [data.message.senderId]: (prev[data.message.senderId] || 0) + 1
+          }));
+        }
+      } else if (data.type === "message_read") {
+        // Update message read status in cache
+        queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+        // Refresh unread counts
+        apiRequest("GET", "/api/messages/unread/by-sender")
+          .then(response => setUnreadCounts(response.unreadBySender || {}))
+          .catch(error => console.error("Failed to refresh unread counts:", error));
       } else if (data.type === "user_added") {
         // Add new user to the list if not already present
         setUsers(prevUsers => {
@@ -131,6 +156,7 @@ export default function ChatPage() {
         recipientId: selectedUserId,
         content,
         timestamp: new Date(),
+        isRead: false,
       };
 
       // Update local state immediately
@@ -201,6 +227,20 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Mark unread messages as read when viewing a chat
+  useEffect(() => {
+    if (selectedUserId && messages.length > 0) {
+      const unreadMessageIds = messages
+        .filter(msg => msg.recipientId === currentUser?.id && !msg.isRead)
+        .map(msg => msg.id);
+
+      if (unreadMessageIds.length > 0) {
+        apiRequest("POST", "/api/messages/read-batch", { messageIds: unreadMessageIds })
+          .catch(error => console.error("Failed to mark messages as read:", error));
+      }
+    }
+  }, [selectedUserId, messages, currentUser?.id]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,26 +331,34 @@ export default function ChatPage() {
               <p className="text-sm mt-2">Invite friends to start chatting!</p>
             </div>
           ) : (
-            otherUsers.map((user) => (
-              <button
-                key={user.id}
-                onClick={() => setSelectedUserId(user.id)}
-                className={`w-full p-3 rounded-md flex items-center gap-3 transition-colors hover-elevate ${
-                  selectedUserId === user.id ? "bg-accent" : ""
-                }`}
-                data-testid={`user-${user.id}`}
-              >
-                <Avatar className="w-12 h-12" style={{ backgroundColor: user.avatarColor }}>
-                  <AvatarFallback className="text-white font-semibold text-lg">
-                    {user.nickname.slice(0, 3).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <p className="font-medium">{user.nickname}</p>
-                  <p className="text-sm text-muted-foreground">@{user.username}</p>
-                </div>
-              </button>
-            ))
+            otherUsers.map((user) => {
+              const unreadCount = unreadCounts[user.id] || 0;
+              return (
+                <button
+                  key={user.id}
+                  onClick={() => setSelectedUserId(user.id)}
+                  className={`w-full p-3 rounded-md flex items-center gap-3 transition-colors hover-elevate ${
+                    selectedUserId === user.id ? "bg-accent" : ""
+                  }`}
+                  data-testid={`user-${user.id}`}
+                >
+                  <Avatar className="w-12 h-12" style={{ backgroundColor: user.avatarColor }}>
+                    <AvatarFallback className="text-white font-semibold text-lg">
+                      {user.nickname.slice(0, 3).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">{user.nickname}</p>
+                    <p className="text-sm text-muted-foreground">@{user.username}</p>
+                  </div>
+                  {unreadCount > 0 && (
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold" style={{ backgroundColor: user.avatarColor }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </div>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>

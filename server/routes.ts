@@ -495,5 +495,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/messages/:id/read", authenticate, async (req: any, res) => {
+    try {
+      const messageId = req.params.id;
+      const message = await storage.markMessageAsRead(messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+
+      // Broadcast read status to both users
+      notifyUser(message.senderId, {
+        type: 'message_read',
+        messageId: message.id,
+      });
+
+      notifyUser(message.recipientId, {
+        type: 'message_read',
+        messageId: message.id,
+      });
+
+      res.json(message);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  app.post("/api/messages/read-batch", authenticate, async (req: any, res) => {
+    try {
+      const { messageIds } = req.body;
+      
+      if (!Array.isArray(messageIds)) {
+        return res.status(400).json({ message: "messageIds must be an array" });
+      }
+
+      await storage.markMessagesAsRead(messageIds);
+
+      // Broadcast read status for all messages
+      messageIds.forEach(messageId => {
+        notifyUser(req.userId, {
+          type: 'message_read',
+          messageId,
+        });
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  app.get("/api/messages/unread/count", authenticate, async (req: any, res) => {
+    try {
+      const count = await storage.getUnreadCount(req.userId);
+      res.json({ unreadCount: count });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  app.get("/api/messages/unread/by-sender", authenticate, async (req: any, res) => {
+    try {
+      const unreadMessages = await storage.getUnreadMessages(req.userId);
+      const unreadBySender: Record<string, number> = {};
+      
+      unreadMessages.forEach(msg => {
+        unreadBySender[msg.senderId] = (unreadBySender[msg.senderId] || 0) + 1;
+      });
+      
+      res.json({ unreadBySender });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch unread messages by sender" });
+    }
+  });
+
   return httpServer;
 }
