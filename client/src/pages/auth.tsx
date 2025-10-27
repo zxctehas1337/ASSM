@@ -138,11 +138,21 @@ export default function AuthPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
+    
     if (name === "username") {
-      const usernameError = validateUsername(value);
+      // Auto-add @ prefix if missing
+      let processedValue = value;
+      if (!processedValue.startsWith("@")) {
+        processedValue = "@" + processedValue;
+      }
+      // Prevent double @ symbols
+      processedValue = processedValue.replace(/^@@+/, "@");
+      setFormData((prev) => ({ ...prev, [name]: processedValue }));
+      
+      const usernameError = validateUsername(processedValue);
       setFormErrors((prev) => ({ ...prev, username: usernameError }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 

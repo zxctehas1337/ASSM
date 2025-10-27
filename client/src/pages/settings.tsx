@@ -60,6 +60,13 @@ export default function SettingsPage() {
     }
   }, [currentUser]);
 
+  const handleNicknameChange = (value: string) => {
+    // Limit nickname length to 20 characters
+    if (value.length <= 20) {
+      setNickname(value);
+    }
+  };
+
   useEffect(() => {
     if (nickname === originalNickname) {
       setNicknameStatus("idle");
@@ -176,10 +183,11 @@ export default function SettingsPage() {
                 id="nickname"
                 type="text"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Your display name"
+                onChange={(e) => handleNicknameChange(e.target.value)}
+                placeholder="Your display name (2-20 characters)"
                 className="pr-10"
                 data-testid="input-nickname-settings"
+                maxLength={20}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isCheckingNickname && (
@@ -193,6 +201,9 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+            {nickname.length > 20 && (
+              <p className="text-sm text-destructive">Nickname must be 20 characters or less</p>
+            )}
             {nickname !== originalNickname && nicknameStatus === "available" && (
               <p className="text-sm text-green-600">This nickname is available</p>
             )}

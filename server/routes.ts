@@ -142,17 +142,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Broadcast to all connected clients
   const broadcastToAllClients = (data: any) => {
-    for (const client of connectedClients.values()) {
+    connectedClients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
       }
-    }
+    });
   };
 
   // Auth Routes
   app.post("/api/auth/register", async (req: any, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
+      
+      // Validate username length (excluding @ prefix which is handled on frontend)
+      if (data.username.length < 3 || data.username.length > 15) {
+        return res.status(400).json({ message: "Username must be between 3 and 15 characters" });
+      }
       
       const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {
@@ -161,6 +166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Optional nickname check
       if (data.nickname) {
+        if (data.nickname.length < 2 || data.nickname.length > 20) {
+          return res.status(400).json({ message: "Nickname must be between 2 and 20 characters" });
+        }
+        
         const existingNickname = await storage.getUserByNickname(data.nickname);
         if (existingNickname) {
           return res.status(400).json({ message: "Nickname already taken" });
@@ -237,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ available: true });
       }
 
-      if (nickname.length < 2) {
+      if (nickname.length < 2 || nickname.length > 20) {
         return res.json({ available: false });
       }
 
@@ -255,6 +264,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Nickname is now optional
       if (nickname) {
+        // Validate nickname length
+        if (nickname.length < 2 || nickname.length > 20) {
+          return res.status(400).json({ message: "Nickname must be between 2 and 20 characters" });
+        }
+        
         const existingNickname = await storage.getUserByNickname(nickname);
         if (existingNickname && existingNickname.id !== req.userId) {
           return res.status(400).json({ message: "Nickname already taken" });
@@ -282,6 +296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = updateProfileSchema.parse(req.body);
       
       if (updates.nickname) {
+        // Validate nickname length
+        if (updates.nickname.length < 2 || updates.nickname.length > 20) {
+          return res.status(400).json({ message: "Nickname must be between 2 and 20 characters" });
+        }
+        
         const existingNickname = await storage.getUserByNickname(updates.nickname);
         if (existingNickname && existingNickname.id !== req.userId) {
           return res.status(400).json({ message: "Nickname already taken" });
