@@ -79,7 +79,8 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.3",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "nodemailer": "^6.9.1"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.3.1",
@@ -104,8 +105,7 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
-    "vite": "^5.4.20",
-    "nodemailer": "^6.9.1"
+    "vite": "^5.4.20"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

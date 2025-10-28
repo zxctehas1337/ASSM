@@ -55,6 +55,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         port: SMTP_PORT,
         secure: SMTP_PORT === 465,
         auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        pool: false,
+        name: 'assm.onrender.com',
       })
     : null;
 
@@ -196,13 +201,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
       emailCodes.set(email, { code, expiresAt, attempts: 0 });
 
-      await transporter.sendMail({
-        from: SMTP_FROM,
-        to: email,
-        subject: "Your ASSM verification code",
-        text: `Your verification code is ${code}. It expires in 5 minutes.`,
-        html: `<p>Your verification code is <b>${code}</b>.</p><p>It expires in 5 minutes.</p>`,
-      });
+      try {
+        await transporter.sendMail({
+          from: SMTP_FROM,
+          to: email,
+          subject: "Your ASSM verification code",
+          text: `Your verification code is ${code}. It expires in 5 minutes.`,
+          html: `<p>Your verification code is <b>${code}</b>.</p><p>It expires in 5 minutes.</p>`,
+        });
+      } catch (e) {
+        console.error('sendMail failed:', e);
+        return res.status(500).json({ message: "Failed to send verification code" });
+      }
 
       res.json({ success: true });
     } catch (error) {
