@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const benefits = [
   {
@@ -15,7 +16,7 @@ const benefits = [
   {
     title: "Secure encryption",
     description: "Your conversations are protected with industry-standard security",
-    features: ["Encrypted passwords", "Secure sessions", "Privacy first"],
+    features: ["Email verification", "Secure sessions", "Privacy first"],
   },
   {
     title: "Custom themes",
@@ -43,34 +44,19 @@ const benefits = [
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [isSignUp, setIsSignUp] = useState(false);
   const [currentBenefit, setCurrentBenefit] = useState(0);
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [isCodeSent, setIsCodeSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formErrors, setFormErrors] = useState({
-    username: "",
-    password: "",
-  });
+  const [error, setError] = useState("");
+  const [resendIn, setResendIn] = useState(0);
 
-  const validateUsername = (username: string) => {
-    if (!username.startsWith("@")) {
-      return "Username must start with @";
-    }
-    const cleanUsername = username.slice(1); // Remove @ prefix
-    if (cleanUsername.length < 3) {
-      return "Username must be at least 3 characters long (excluding @)";
-    }
-    if (cleanUsername.length > 15) {
-      return "Username must not exceed 15 characters (excluding @)";
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-      return "Username can only contain letters, numbers, and underscores";
-    }
-    return "";
-  };
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -90,35 +76,17 @@ export default function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate username
-    const usernameError = validateUsername(formData.username);
-    if (usernameError) {
-      setFormErrors((prev) => ({ ...prev, username: usernameError }));
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      if (isSignUp) {
-        const response = await apiRequest("POST", "/api/auth/register", {
-          ...formData,
-          username: formData.username.slice(1), // Remove @ prefix for backend
-        });
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("userId", response.userId);
-        toast({
-          title: "Account created!",
-          description: "Welcome to ASSM. Let's set up your profile.",
-        });
-        setLocation("/profile-setup");
+      setError("");
+      if (!isCodeSent) {
+        await apiRequest("POST", "/api/auth/request-email-code", { email });
+        setIsCodeSent(true);
+        setResendIn(60);
+        toast({ title: "Code sent", description: "Check your email for the 6-digit code." });
       } else {
-        const response = await apiRequest("POST", "/api/auth/login", {
-          username: formData.username.slice(1), // Remove @ prefix for backend
-          password: formData.password,
-        });
+        const response = await apiRequest("POST", "/api/auth/verify-email-code", { email, code });
         localStorage.setItem("token", response.token);
         localStorage.setItem("userId", response.userId);
-        
         if (response.profileSetupComplete) {
           setLocation("/chat");
         } else {
@@ -126,33 +94,11 @@ export default function AuthPage() {
         }
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
+      const message = error.message || "Something went wrong";
+      setError(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === "username") {
-      // Auto-add @ prefix if missing
-      let processedValue = value;
-      if (!processedValue.startsWith("@")) {
-        processedValue = "@" + processedValue;
-      }
-      // Prevent double @ symbols
-      processedValue = processedValue.replace(/^@@+/, "@");
-      setFormData((prev) => ({ ...prev, [name]: processedValue }));
-      
-      const usernameError = validateUsername(processedValue);
-      setFormErrors((prev) => ({ ...prev, username: usernameError }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -163,48 +109,49 @@ export default function AuthPage() {
         <div className="w-full max-w-md space-y-8 animate-fade-in">
           <div className="text-center">
             <h1 className="text-4xl font-semibold text-white mb-2">ASSM</h1>
-            <p className="text-gray-400">
-              {isSignUp ? "Create your account" : "Welcome back"}
-            </p>
+            <p className="text-gray-400">Sign in or sign up with your email</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-auth">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-white">
-                Username
+              <Label htmlFor="email" className="text-white">
+                Email
               </Label>
               <Input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
-                value={formData.username}
-                onChange={handleChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-white/40"
-                placeholder="@username (3-15 characters)"
-                data-testid="input-username"
+                placeholder="you@example.com"
+                data-testid="input-email"
               />
-              {formErrors.username && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.username}</p>
+              {error && (
+                <p className="text-red-500 text-sm mt-1">{error}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">
-                Password
-              </Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-white/40"
-                placeholder="Enter your password"
-                data-testid="input-password"
-              />
-            </div>
+            {isCodeSent && (
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-white">
+                  Enter 6-digit code
+                </Label>
+                <div className="flex justify-center">
+                  <InputOTP maxLength={6} value={code} onChange={setCode}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -212,22 +159,36 @@ export default function AuthPage() {
               disabled={isLoading}
               data-testid="button-submit"
             >
-              {isLoading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
+              {isLoading ? "Please wait..." : isCodeSent ? "Verify Code" : "Send Code"}
             </Button>
-          </form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-gray-400 hover:text-white transition-colors"
-              data-testid="button-toggle-mode"
-            >
-              {isSignUp
-                ? "Already have an account? Sign in"
-                : "Don't have an account? Sign up"}
-            </button>
-          </div>
+            {isCodeSent && (
+              <div className="text-center text-gray-400">
+                {resendIn > 0 ? (
+                  <span>Resend code in {resendIn}s</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="hover:text-white transition-colors"
+                    onClick={async () => {
+                      try {
+                        setIsLoading(true);
+                        await apiRequest("POST", "/api/auth/request-email-code", { email });
+                        setResendIn(60);
+                        toast({ title: "Code re-sent", description: "Check your email again." });
+                      } catch (err: any) {
+                        toast({ title: "Error", description: err.message || "Failed to resend" , variant: "destructive"});
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                  >
+                    Resend code
+                  </button>
+                )}
+              </div>
+            )}
+          </form>
         </div>
       </div>
 

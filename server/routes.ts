@@ -5,11 +5,17 @@ import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema, requestEmailCodeSchema, verifyEmailCodeSchema } from "@shared/schema";
+import nodemailer from "nodemailer";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8337365337:AAGPyNR_6hbzc-rqM7ggHcIa83L-keLzawE";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "-1003176535629";
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "0", 10) || undefined;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+const SMTP_FROM = process.env.SMTP_FROM || "ASSM <no-reply@example.com>";
 
 interface AuthRequest {
   userId?: string;
@@ -38,6 +44,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time messaging
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const connectedClients = new Map<string, WebSocket>();
+
+  // In-memory email verification codes
+  const emailCodes = new Map<string, { code: string; expiresAt: number; attempts: number }>();
+
+  // SMTP transporter
+  const transporter = (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD)
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+      })
+    : null;
 
   // Add a new route for full user sync
   app.get("/api/users/sync", authenticate, async (req: any, res) => {
@@ -164,6 +183,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Auth Routes
+  // Request a verification code to be sent via email
+  app.post("/api/auth/request-email-code", async (req: any, res) => {
+    try {
+      const { email } = requestEmailCodeSchema.parse(req.body);
+
+      if (!transporter) {
+        return res.status(500).json({ message: "Email service not configured" });
+      }
+
+      const code = (Math.floor(100000 + Math.random() * 900000)).toString();
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+      emailCodes.set(email, { code, expiresAt, attempts: 0 });
+
+      await transporter.sendMail({
+        from: SMTP_FROM,
+        to: email,
+        subject: "Your ASSM verification code",
+        text: `Your verification code is ${code}. It expires in 5 minutes.`,
+        html: `<p>Your verification code is <b>${code}</b>.</p><p>It expires in 5 minutes.</p>`,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  });
+
+  // Verify email + code, create account if needed, and return JWT
+  app.post("/api/auth/verify-email-code", async (req: any, res) => {
+    try {
+      const { email, code } = verifyEmailCodeSchema.parse(req.body);
+      const entry = emailCodes.get(email);
+
+      if (!entry) {
+        return res.status(400).json({ message: "No code requested for this email" });
+      }
+      if (Date.now() > entry.expiresAt) {
+        emailCodes.delete(email);
+        return res.status(400).json({ message: "Code expired" });
+      }
+      if (entry.attempts >= 5) {
+        emailCodes.delete(email);
+        return res.status(429).json({ message: "Too many attempts. Request a new code." });
+      }
+      if (entry.code !== code) {
+        entry.attempts += 1;
+        emailCodes.set(email, entry);
+        return res.status(400).json({ message: "Invalid code" });
+      }
+
+      // Code is valid - consume it
+      emailCodes.delete(email);
+
+      // Find or create user
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Generate a unique username based on email local part
+        const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 15) || 'user';
+        let candidate = base;
+        let counter = 1;
+        while (await storage.getUserByUsername(candidate)) {
+          const suffix = `_${counter}`;
+          candidate = (base + suffix).slice(0, 15);
+          counter++;
+        }
+
+        const hashedPassword = await bcrypt.hash("email-auth-placeholder", 10);
+        user = await storage.createUser({
+          username: candidate,
+          password: hashedPassword,
+          nickname: candidate,
+          email,
+          avatarColor: '#2196F3',
+          theme: 'light',
+          profileSetupComplete: false,
+        } as any);
+      }
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+      res.json({ token, userId: user.id, profileSetupComplete: user.profileSetupComplete });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
   app.post("/api/auth/register", async (req: any, res) => {
     try {
       const data = insertUserSchema.parse(req.body);

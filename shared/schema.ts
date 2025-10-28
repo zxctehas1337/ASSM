@@ -12,6 +12,8 @@ export const users = pgTable("users", {
   theme: text("theme").notNull().default('light'),
   profileSetupComplete: boolean("profile_setup_complete").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Optional email to support email-based auth while keeping backward compatibility
+  email: text("email").unique(),
 });
 
 export const messages = pgTable("messages", {
@@ -39,6 +41,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   username: z.string().min(3, "Username must be at least 3 characters").max(20),
   password: z.string().min(6, "Password must be at least 6 characters"),
   nickname: z.string().min(2, "Nickname must be at least 2 characters").max(20).optional(),
+  email: z.string().email().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
@@ -63,6 +66,16 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   status: true,
 });
 
+// Email-code based auth schemas
+export const requestEmailCodeSchema = z.object({
+  email: z.string().email(),
+});
+
+export const verifyEmailCodeSchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6, "Code must be 6 digits"),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
@@ -71,3 +84,5 @@ export type LoginData = z.infer<typeof loginSchema>;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;
+export type RequestEmailCode = z.infer<typeof requestEmailCodeSchema>;
+export type VerifyEmailCode = z.infer<typeof verifyEmailCodeSchema>;
