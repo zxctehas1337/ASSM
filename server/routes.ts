@@ -200,13 +200,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         to: [testEmail],
         subject: "ASSM Email Service Test",
         text: `This is a test email from ASSM. Test code: ${testCode}`,
-        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">ASSM Email Service Test</h2>
-          <p>This is a test email to verify the Resend integration is working.</p>
-          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1a1a1a; margin-bottom: 20px;">ASSM Email Service Test</h2>
+          <p style="color: #333; margin-bottom: 15px;">This is a test email to verify the Resend integration is working.</p>
+          <div style="background-color: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 25px; text-align: center; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; color: #1a1a1a;">
             ${testCode}
           </div>
-          <p style="color: #666; font-size: 14px;">If you see this email, the service is working correctly!</p>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">If you see this email, the service is working correctly!</p>
         </div>`,
       });
 
@@ -267,14 +267,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           to: [email],
           subject: "Your ASSM verification code",
           text: `Your verification code is ${code}. It expires in 5 minutes.`,
-          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">ASSM Verification Code</h2>
-            <p>Your verification code is:</p>
-            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1a1a1a; margin-bottom: 20px;">ASSM Verification Code</h2>
+            <p style="color: #333; margin-bottom: 15px;">Your verification code is:</p>
+            <div style="background-color: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 25px; text-align: center; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; color: #1a1a1a;">
               ${code}
             </div>
-            <p style="color: #666; font-size: 14px;">This code expires in 5 minutes.</p>
-            <p style="color: #666; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">This code expires in 5 minutes.</p>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
           </div>`,
         });
 

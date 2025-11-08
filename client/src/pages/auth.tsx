@@ -141,12 +141,12 @@ export default function AuthPage() {
                 <div className="flex justify-center">
                   <InputOTP maxLength={6} value={code} onChange={setCode}>
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
+                      <InputOTPSlot index={0} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
+                      <InputOTPSlot index={1} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
+                      <InputOTPSlot index={2} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
+                      <InputOTPSlot index={3} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
+                      <InputOTPSlot index={4} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
+                      <InputOTPSlot index={5} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
