@@ -48,20 +48,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory email verification codes
   const emailCodes = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
-  // SMTP transporter
+  // SMTP transporter with improved Gmail configuration
+  // Note: If port 465 doesn't work, try port 587 with secure: false
+  // Gmail requires App Password (not regular password) for SMTP access
   const transporter = (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD)
     ? nodemailer.createTransport({
         host: SMTP_HOST,
         port: SMTP_PORT,
-        secure: SMTP_PORT === 465,
-        auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
+        secure: SMTP_PORT === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+        auth: { 
+          user: SMTP_USER, 
+          pass: SMTP_PASSWORD 
+        },
+        // Increased timeouts for cloud hosting (Render.com, etc.)
+        connectionTimeout: 60000, // 60 seconds - increased for slow networks
+        greetingTimeout: 30000, // 30 seconds
+        socketTimeout: 60000, // 60 seconds - increased for slow networks
+        // Gmail-specific settings
+        tls: {
+          // Do not reject unauthorized certificates (may be needed for some networks)
+          rejectUnauthorized: false
+        },
+        // Connection pool settings
         pool: false,
+        // Service name
         name: 'assm.onrender.com',
+        // Retry settings
+        maxConnections: 1,
+        maxMessages: 3,
+        // Additional options for better reliability
+        requireTLS: SMTP_PORT === 587, // Only for STARTTLS (port 587)
       })
     : null;
+
+  // Verify transporter connection on startup (async, non-blocking)
+  if (transporter) {
+    transporter.verify((error: any, success: any) => {
+      if (error) {
+        console.error('❌ SMTP connection verification failed:', error.message);
+        console.error('   This may cause email sending to fail. Check your SMTP settings.');
+      } else {
+        console.log('✓ SMTP connection verified successfully');
+      }
+    });
+  }
 
   // Add a new route for full user sync
   app.get("/api/users/sync", authenticate, async (req: any, res) => {
@@ -202,16 +232,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       emailCodes.set(email, { code, expiresAt, attempts: 0 });
 
       try {
-        await transporter.sendMail({
-          from: SMTP_FROM,
+        const mailOptions = {
+          from: SMTP_FROM || SMTP_USER,
           to: email,
           subject: "Your ASSM verification code",
           text: `Your verification code is ${code}. It expires in 5 minutes.`,
-          html: `<p>Your verification code is <b>${code}</b>.</p><p>It expires in 5 minutes.</p>`,
-        });
-      } catch (e) {
-        console.error('sendMail failed:', e);
-        return res.status(500).json({ message: "Failed to send verification code" });
+          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">ASSM Verification Code</h2>
+            <p>Your verification code is:</p>
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+              ${code}
+            </div>
+            <p style="color: #666; font-size: 14px;">This code expires in 5 minutes.</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
+          </div>`,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✓ Email sent successfully:', info.messageId);
+      } catch (e: any) {
+        console.error('❌ sendMail failed:', e.message || e);
+        console.error('   Error code:', e.code);
+        console.error('   Command:', e.command);
+        
+        // More specific error messages
+        let errorMessage = "Failed to send verification code";
+        if (e.code === 'ETIMEDOUT' || e.code === 'ECONNREFUSED') {
+          errorMessage = "Email service is temporarily unavailable. Please try again later.";
+        } else if (e.code === 'EAUTH') {
+          errorMessage = "Email authentication failed. Please check SMTP credentials.";
+        }
+        
+        return res.status(500).json({ message: errorMessage });
       }
 
       res.json({ success: true });
