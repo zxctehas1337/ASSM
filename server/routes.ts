@@ -6,16 +6,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema, requestEmailCodeSchema, verifyEmailCodeSchema } from "@shared/schema";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "default-secret-change-in-production";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined;
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-const SMTP_FROM = process.env.SMTP_FROM;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 interface AuthRequest {
   userId?: string;
@@ -48,58 +44,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory email verification codes
   const emailCodes = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
-  // SMTP transporter with improved Gmail configuration
-  // Note: If port 465 doesn't work, try port 587 with secure: false
-  // Gmail requires App Password (not regular password) for SMTP access
-  const transporter = (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD)
-    ? nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: SMTP_PORT === 465, // true for 465 (SSL), false for 587 (STARTTLS)
-        auth: { 
-          user: SMTP_USER, 
-          pass: SMTP_PASSWORD 
-        },
-        // Significantly increased timeouts for cloud hosting and VPN environments
-        connectionTimeout: 120000, // 120 seconds - increased for VPN/slow networks
-        greetingTimeout: 60000, // 60 seconds
-        socketTimeout: 120000, // 120 seconds - increased for VPN/slow networks
-        // Enhanced TLS settings for Gmail
-        tls: {
-          rejectUnauthorized: false, // More permissive for VPN environments
-          minVersion: 'TLSv1.2'
-        },
-        // Connection pool settings - enable pooling for better performance
-        pool: true,
-        maxConnections: 3,
-        maxMessages: 5,
-        // Service name
-        name: 'assm.onrender.com',
-        // Additional options for better reliability
-        requireTLS: SMTP_PORT === 587, // Only for STARTTLS (port 587)
-        // Debug mode for troubleshooting (remove in production)
-        debug: process.env.NODE_ENV === 'development',
-        logger: process.env.NODE_ENV === 'development',
-      })
-    : null;
+  // Resend client for email sending
+  const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
-  // Verify transporter connection on startup (async, non-blocking)
-  if (transporter) {
-    transporter.verify((error: any, success: any) => {
-      if (error) {
-        console.error('❌ SMTP connection verification failed:', error.message);
-        console.error('   Error code:', error.code);
-        console.error('   This may cause email sending to fail. Check your SMTP settings.');
-        
-        // Try alternative port if primary fails
-        if (SMTP_PORT === 465) {
-          console.warn('⚠️  Port 465 failed. Consider trying port 587 with STARTTLS.');
-          console.warn('   Update SMTP_PORT in config.env to 587 if issues persist.');
-        }
-      } else {
-        console.log('✓ SMTP connection verified successfully');
-      }
-    });
+  // Check Resend configuration on startup
+  if (resend) {
+    console.log('✓ Resend client initialized successfully');
+  } else {
+    console.warn('⚠️  Resend not configured - missing RESEND_API_KEY environment variable');
   }
 
   // Add a new route for full user sync
@@ -226,13 +178,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
+  // Email testing endpoint for debugging
+  app.post("/api/test-email", async (req: any, res) => {
+    try {
+      console.log('🧪 Testing Resend email service...');
+      
+      if (!resend) {
+        console.log('❌ Resend not configured');
+        return res.status(500).json({
+          success: false,
+          message: 'Resend not configured - missing RESEND_API_KEY'
+        });
+      }
+
+      // Test email sending
+      const testEmail = 'test@example.com';
+      const testCode = '123456';
+      
+      const { data, error } = await resend.emails.send({
+        from: 'ASSM <onboarding@resend.dev>',
+        to: [testEmail],
+        subject: "ASSM Email Service Test",
+        text: `This is a test email from ASSM. Test code: ${testCode}`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">ASSM Email Service Test</h2>
+          <p>This is a test email to verify the Resend integration is working.</p>
+          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            ${testCode}
+          </div>
+          <p style="color: #666; font-size: 14px;">If you see this email, the service is working correctly!</p>
+        </div>`,
+      });
+
+      if (error) {
+        console.error('❌ Resend test failed:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Resend test failed',
+          error: error.message
+        });
+      }
+
+      console.log('✅ Resend test successful!');
+      console.log('   Message ID:', data?.id);
+      
+      res.json({
+        success: true,
+        message: 'Resend email service is working correctly',
+        messageId: data?.id,
+        service: 'Resend'
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Email test failed:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Email test failed',
+        error: error.message
+      });
+    }
+  });
+
   // Auth Routes
   // Request a verification code to be sent via email
   app.post("/api/auth/request-email-code", async (req: any, res) => {
     try {
       const { email } = requestEmailCodeSchema.parse(req.body);
 
-      if (!transporter) {
+      console.log('🔍 Debug: Email configuration check');
+      console.log('   RESEND_API_KEY:', RESEND_API_KEY ? '✓' : '✗');
+      console.log('   Resend client exists:', resend ? '✓' : '✗');
+
+      if (!resend) {
+        console.error('❌ Email service not configured - missing RESEND_API_KEY environment variable');
         return res.status(500).json({ message: "Email service not configured" });
       }
 
@@ -240,10 +258,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
       emailCodes.set(email, { code, expiresAt, attempts: 0 });
 
+      console.log('📧 Attempting to send email to:', email);
+      console.log('   Using Resend API');
+
       try {
-        const mailOptions = {
-          from: SMTP_FROM || SMTP_USER,
-          to: email,
+        const { data, error } = await resend.emails.send({
+          from: 'ASSM <onboarding@resend.dev>',
+          to: [email],
           subject: "Your ASSM verification code",
           text: `Your verification code is ${code}. It expires in 5 minutes.`,
           html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -255,24 +276,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <p style="color: #666; font-size: 14px;">This code expires in 5 minutes.</p>
             <p style="color: #666; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
           </div>`,
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✓ Email sent successfully:', info.messageId);
+        if (error) {
+          console.error('❌ Resend API Error:', error);
+          throw new Error(error.message);
+        }
+
+        console.log('✅ Email sent successfully!');
+        console.log('   Message ID:', data?.id);
       } catch (e: any) {
-        console.error('❌ sendMail failed:', e.message || e);
-        console.error('   Error code:', e.code);
-        console.error('   Command:', e.command);
+        console.error('❌ Email sending failed:', e.message);
         
-        // More specific error messages
         let errorMessage = "Failed to send verification code";
-        if (e.code === 'ETIMEDOUT' || e.code === 'ECONNREFUSED') {
-          errorMessage = "Email service is temporarily unavailable. Please try again later.";
-        } else if (e.code === 'EAUTH') {
-          errorMessage = "Email authentication failed. Please check SMTP credentials.";
+        if (e.message.includes('rate limit')) {
+          errorMessage = "Email service rate limit exceeded. Please try again later.";
+        } else if (e.message.includes('invalid')) {
+          errorMessage = "Invalid email configuration. Please contact support.";
         }
         
-        return res.status(500).json({ message: errorMessage });
+        return res.status(500).json({ 
+          message: errorMessage,
+          debug: {
+            error: e.message,
+            service: 'Resend'
+          }
+        });
       }
 
       res.json({ success: true });
@@ -280,6 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
+      console.error('❌ Unexpected error:', error);
       res.status(500).json({ message: "Failed to send verification code" });
     }
   });
