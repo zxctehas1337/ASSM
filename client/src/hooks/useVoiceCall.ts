@@ -1,5 +1,13 @@
+/// <reference types="vite/client" />
+
 import { useState, useRef, useCallback, useEffect } from 'react';
+import type { RefObject } from 'react';
 import type { User } from '@shared/schema';
+import { toast } from '@/hooks/use-toast';
+
+// Environment variables with fallback values
+const TURN_USERNAME = import.meta.env.VITE_TURN_USERNAME || 'cf1c508f38e5750fc60c572d';
+const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL || '6xcE3PB8Zg3RW1AA';
 
 export interface CallState {
   isInCall: boolean;
@@ -40,7 +48,22 @@ export function useVoiceCall(wsRef: React.RefObject<WebSocket | null>) {
     const peerConnection = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+          urls: 'turn:a.relay.metered.ca:80',
+          username: process.env.TURN_USERNAME || 'cf1c508f38e5750fc60c572d',
+          credential: process.env.TURN_CREDENTIAL || '6xcE3PB8Zg3RW1AA',
+        },
+        {
+          urls: 'turn:a.relay.metered.ca:443',
+          username: process.env.TURN_USERNAME || 'cf1c508f38e5750fc60c572d',
+          credential: process.env.TURN_CREDENTIAL || '6xcE3PB8Zg3RW1AA',
+        },
+        {
+          urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+          username: process.env.TURN_USERNAME || 'cf1c508f38e5750fc60c572d',
+          credential: process.env.TURN_CREDENTIAL || '6xcE3PB8Zg3RW1AA',
+        }
       ]
     });
 

@@ -1,6 +1,34 @@
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+
+// Load environment variables from config.env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const configPath = join(__dirname, "..", "config.env");
+
+try {
+  const configContent = readFileSync(configPath, "utf-8");
+  const config = {};
+  configContent.split("\n").forEach((line) => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+      const [key, ...valueParts] = trimmed.split("=");
+      const value = valueParts.join("=").trim();
+      // Remove quotes if present
+      const cleanValue = value.replace(/^["']|["']$/g, "");
+      if (key && cleanValue) {
+        process.env[key.trim()] = cleanValue;
+      }
+    }
+  });
+  console.log("✓ Loaded environment variables from config.env");
+} catch (error) {
+  console.warn("⚠ Could not load config.env, using system environment variables");
+}
 
 const app = express();
 
@@ -70,12 +98,10 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = parseInt(process.env.PORT || '3000', 10);
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`Serving on port ${port}`);
   });
 })();

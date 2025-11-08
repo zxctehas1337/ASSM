@@ -8,14 +8,14 @@ import { z } from "zod";
 import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema, requestEmailCodeSchema, verifyEmailCodeSchema } from "@shared/schema";
 import nodemailer from "nodemailer";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8337365337:AAGPyNR_6hbzc-rqM7ggHcIa83L-keLzawE";
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "-1003176535629";
+const JWT_SECRET = process.env.SESSION_SECRET || "default-secret-change-in-production";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "0", 10) || undefined;
+const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-const SMTP_FROM = process.env.SMTP_FROM || "ASSM <no-reply@example.com>";
+const SMTP_FROM = process.env.SMTP_FROM;
 
 interface AuthRequest {
   userId?: string;
