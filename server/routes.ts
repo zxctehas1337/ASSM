@@ -60,24 +60,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: SMTP_USER, 
           pass: SMTP_PASSWORD 
         },
-        // Increased timeouts for cloud hosting (Render.com, etc.)
-        connectionTimeout: 60000, // 60 seconds - increased for slow networks
-        greetingTimeout: 30000, // 30 seconds
-        socketTimeout: 60000, // 60 seconds - increased for slow networks
-        // Gmail-specific settings
+        // Significantly increased timeouts for cloud hosting and VPN environments
+        connectionTimeout: 120000, // 120 seconds - increased for VPN/slow networks
+        greetingTimeout: 60000, // 60 seconds
+        socketTimeout: 120000, // 120 seconds - increased for VPN/slow networks
+        // Enhanced TLS settings for Gmail
         tls: {
-          // Do not reject unauthorized certificates (may be needed for some networks)
-          rejectUnauthorized: false
+          rejectUnauthorized: false, // More permissive for VPN environments
+          minVersion: 'TLSv1.2'
         },
-        // Connection pool settings
-        pool: false,
+        // Connection pool settings - enable pooling for better performance
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 5,
         // Service name
         name: 'assm.onrender.com',
-        // Retry settings
-        maxConnections: 1,
-        maxMessages: 3,
         // Additional options for better reliability
         requireTLS: SMTP_PORT === 587, // Only for STARTTLS (port 587)
+        // Debug mode for troubleshooting (remove in production)
+        debug: process.env.NODE_ENV === 'development',
+        logger: process.env.NODE_ENV === 'development',
       })
     : null;
 
@@ -86,7 +88,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     transporter.verify((error: any, success: any) => {
       if (error) {
         console.error('❌ SMTP connection verification failed:', error.message);
+        console.error('   Error code:', error.code);
         console.error('   This may cause email sending to fail. Check your SMTP settings.');
+        
+        // Try alternative port if primary fails
+        if (SMTP_PORT === 465) {
+          console.warn('⚠️  Port 465 failed. Consider trying port 587 with STARTTLS.');
+          console.warn('   Update SMTP_PORT in config.env to 587 if issues persist.');
+        }
       } else {
         console.log('✓ SMTP connection verified successfully');
       }
