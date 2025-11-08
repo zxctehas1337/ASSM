@@ -11,7 +11,7 @@ import { Resend } from "resend";
 const JWT_SECRET = process.env.SESSION_SECRET || "default-secret-change-in-production";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_fujsQKUr_D4ff5vN1VM8QoC3r2Tf5Xws6"
 
 interface AuthRequest {
   userId?: string;
