@@ -69,8 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Google OAuth Strategy
-  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
-    passport.use(new GoogleStrategy({
+  const isGoogleConfigured = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET;
+  if (isGoogleConfigured) {
+    console.log('✓ Configuring Google OAuth strategy');
+    passport.use('google', new GoogleStrategy({
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: `${BASE_URL}/api/auth/google/callback`,
@@ -109,11 +111,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return done(error);
       }
     }));
+  } else {
+    console.warn('⚠ Google OAuth not configured - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
   }
 
   // GitHub OAuth Strategy
-  if (GITHUB_CLIENT_ID && GITHUB_SECRET) {
-    passport.use(new GitHubStrategy({
+  const isGitHubConfigured = GITHUB_CLIENT_ID && GITHUB_SECRET;
+  if (isGitHubConfigured) {
+    console.log('✓ Configuring GitHub OAuth strategy');
+    passport.use('github', new GitHubStrategy({
       clientID: GITHUB_CLIENT_ID,
       clientSecret: GITHUB_SECRET,
       callbackURL: `${BASE_URL}/api/auth/github/callback`,
@@ -153,6 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return done(error);
       }
     }));
+  } else {
+    console.warn('⚠ GitHub OAuth not configured - missing GITHUB_CLIENT_ID or GITHUB_SECRET');
   }
 
 
@@ -284,38 +292,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth Routes
 
   // Google OAuth Routes
-  app.get("/api/auth/google", passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    session: false 
-  }));
+  if (isGoogleConfigured) {
+    app.get("/api/auth/google", passport.authenticate('google', { 
+      scope: ['profile', 'email'],
+      session: false 
+    }));
 
-  app.get("/api/auth/google/callback", 
-    passport.authenticate('google', { session: false, failureRedirect: '/auth?error=google_auth_failed' }),
-    (req: any, res) => {
-      const user = req.user as any;
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-      
-      // Redirect to frontend with token
-      res.redirect(`/auth?token=${token}&userId=${user.id}&profileSetupComplete=${user.profileSetupComplete}`);
-    }
-  );
+    app.get("/api/auth/google/callback", 
+      passport.authenticate('google', { session: false, failureRedirect: '/auth?error=google_auth_failed' }),
+      (req: any, res) => {
+        const user = req.user as any;
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+        
+        // Redirect to frontend with token
+        res.redirect(`/auth?token=${token}&userId=${user.id}&profileSetupComplete=${user.profileSetupComplete}`);
+      }
+    );
+  } else {
+    app.get("/api/auth/google", (_req, res) => {
+      res.status(503).json({ message: "Google OAuth is not configured" });
+    });
+    app.get("/api/auth/google/callback", (_req, res) => {
+      res.redirect('/auth?error=google_not_configured');
+    });
+  }
 
   // GitHub OAuth Routes
-  app.get("/api/auth/github", passport.authenticate('github', { 
-    scope: ['user:email'],
-    session: false 
-  }));
+  if (isGitHubConfigured) {
+    app.get("/api/auth/github", passport.authenticate('github', { 
+      scope: ['user:email'],
+      session: false 
+    }));
 
-  app.get("/api/auth/github/callback",
-    passport.authenticate('github', { session: false, failureRedirect: '/auth?error=github_auth_failed' }),
-    (req: any, res) => {
-      const user = req.user as any;
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-      
-      // Redirect to frontend with token
-      res.redirect(`/auth?token=${token}&userId=${user.id}&profileSetupComplete=${user.profileSetupComplete}`);
-    }
-  );
+    app.get("/api/auth/github/callback",
+      passport.authenticate('github', { session: false, failureRedirect: '/auth?error=github_auth_failed' }),
+      (req: any, res) => {
+        const user = req.user as any;
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+        
+        // Redirect to frontend with token
+        res.redirect(`/auth?token=${token}&userId=${user.id}&profileSetupComplete=${user.profileSetupComplete}`);
+      }
+    );
+  } else {
+    app.get("/api/auth/github", (_req, res) => {
+      res.status(503).json({ message: "GitHub OAuth is not configured" });
+    });
+    app.get("/api/auth/github/callback", (_req, res) => {
+      res.redirect('/auth?error=github_not_configured');
+    });
+  }
 
   // Profile Routes
   app.post("/api/profile/setup", authenticate, async (req: any, res) => {

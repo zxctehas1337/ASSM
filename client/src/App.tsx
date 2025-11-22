@@ -13,6 +13,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={AuthPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/profile-setup" component={ProfileSetup} />
       <Route path="/chat" component={ChatPage} />
       <Route path="/settings" component={SettingsPage} />
