@@ -344,6 +344,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Profile Routes
+  app.post("/api/auth/check-nickname", authenticate, async (req: any, res) => {
+    try {
+      const { nickname } = req.body;
+      
+      if (!nickname || nickname.length < 3) {
+        return res.status(400).json({ message: "Nickname must be at least 3 characters" });
+      }
+
+      const existingUser = await storage.getUserByNickname(nickname);
+      const available = !existingUser || existingUser.id === req.userId;
+      
+      res.json({ available });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to check nickname" });
+    }
+  });
+
   app.post("/api/profile/setup", authenticate, async (req: any, res) => {
     try {
       const { nickname, avatarColor } = req.body;
