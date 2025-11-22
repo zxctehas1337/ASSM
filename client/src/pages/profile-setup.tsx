@@ -67,7 +67,16 @@ export default function ProfileSetup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (nicknameStatus !== "available" && nickname) {
+    if (!nickname || nickname.trim().length < 3) {
+      toast({
+        title: "Invalid nickname",
+        description: "Nickname must be at least 3 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (nicknameStatus !== "available") {
       toast({
         title: "Invalid nickname",
         description: "Please choose an available nickname",
@@ -198,7 +207,7 @@ export default function ProfileSetup() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !!(nickname && nicknameStatus !== "available")}
+            disabled={isLoading || !nickname || nickname.trim().length < 3 || nicknameStatus !== "available"}
             data-testid="button-continue"
           >
             {isLoading ? "Setting up..." : "Continue to Messenger"}
