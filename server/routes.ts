@@ -5,8 +5,7 @@ import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { insertUserSchema, loginSchema, updateProfileSchema, insertMessageSchema, insertFeedbackSchema, requestEmailCodeSchema, verifyEmailCodeSchema } from "@shared/schema";
-import { Resend } from "resend";
+import { updateProfileSchema, insertMessageSchema, insertFeedbackSchema } from "@shared/schema";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
@@ -14,7 +13,6 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 const JWT_SECRET = process.env.SESSION_SECRET || "LOTAKBAS1992";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_fujsQKUr_D4ff5vN1VM8QoC3r2Tf5Xws6";
 
 // OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -51,14 +49,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const connectedClients = new Map<string, WebSocket>();
 
-  // In-memory email verification codes
-  const emailCodes = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
-  // Resend client for email sending
-  const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
   // Configure Passport for OAuth
   app.use(passport.initialize());
+
+  // Passport serialization (required even without sessions)
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
 
   // Google OAuth Strategy
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
@@ -147,12 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
   }
 
-  // Check Resend configuration on startup
-  if (resend) {
-    console.log('✓ Resend client initialized successfully');
-  } else {
-    console.warn('⚠️  Resend not configured - missing RESEND_API_KEY environment variable');
-  }
+
 
   // Add a new route for full user sync
   app.get("/api/users/sync", authenticate, async (req: any, res) => {
@@ -278,309 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
-  // Email testing endpoint for debugging
-  app.post("/api/test-email", async (req: any, res) => {
-    try {
-      console.log('🧪 Testing Resend email service...');
-      
-      if (!resend) {
-        console.log('❌ Resend not configured');
-        return res.status(500).json({
-          success: false,
-          message: 'Resend not configured - missing RESEND_API_KEY'
-        });
-      }
-
-      // Test email sending
-      const testEmail = 'test@example.com';
-      const testCode = '123456';
-      
-      const { data, error } = await resend.emails.send({
-        from: 'ASSM <onboarding@resend.dev>',
-        to: [testEmail],
-        subject: "ASSM Email Service Test",
-        text: `This is a test email from ASSM. Test code: ${testCode}`,
-        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a1a; margin-bottom: 20px;">ASSM Email Service Test</h2>
-          <p style="color: #333; margin-bottom: 15px;">This is a test email to verify the Resend integration is working.</p>
-          <div style="background-color: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 25px; text-align: center; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; color: #1a1a1a;">
-            ${testCode}
-          </div>
-          <p style="color: #666; font-size: 14px; margin-top: 20px;">If you see this email, the service is working correctly!</p>
-        </div>`,
-      });
-
-      if (error) {
-        console.error('❌ Resend test failed:', error);
-        return res.status(500).json({
-          success: false,
-          message: 'Resend test failed',
-          error: error.message
-        });
-      }
-
-      console.log('✅ Resend test successful!');
-      console.log('   Message ID:', data?.id);
-      
-      res.json({
-        success: true,
-        message: 'Resend email service is working correctly',
-        messageId: data?.id,
-        service: 'Resend'
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Email test failed:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Email test failed',
-        error: error.message
-      });
-    }
-  });
-
   // Auth Routes
-  // Request a verification code to be sent via email
-  app.post("/api/auth/request-email-code", async (req: any, res) => {
-    try {
-      const { email } = requestEmailCodeSchema.parse(req.body);
-
-      console.log('🔍 Debug: Email configuration check');
-      console.log('   RESEND_API_KEY:', RESEND_API_KEY ? '✓' : '✗');
-      console.log('   Resend client exists:', resend ? '✓' : '✗');
-
-      if (!resend) {
-        console.error('❌ Email service not configured - missing RESEND_API_KEY environment variable');
-        return res.status(500).json({ message: "Email service not configured" });
-      }
-
-      const code = (Math.floor(100000 + Math.random() * 900000)).toString();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-      emailCodes.set(email, { code, expiresAt, attempts: 0 });
-
-      console.log('📧 Attempting to send email to:', email);
-      console.log('   Using Resend API');
-
-      try {
-        const { data, error } = await resend.emails.send({
-          from: 'ASSM <onboarding@resend.dev>',
-          to: [email],
-          subject: "Your ASSM verification code",
-          text: `Your verification code is ${code}. It expires in 5 minutes.`,
-          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1a1a1a; margin-bottom: 20px;">ASSM Verification Code</h2>
-            <p style="color: #333; margin-bottom: 15px;">Your verification code is:</p>
-            <div style="background-color: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 25px; text-align: center; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; color: #1a1a1a;">
-              ${code}
-            </div>
-            <p style="color: #666; font-size: 14px; margin-top: 20px;">This code expires in 5 minutes.</p>
-            <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
-          </div>`,
-        });
-
-        if (error) {
-          console.error('❌ Resend API Error:', error);
-          throw new Error(error.message);
-        }
-
-        console.log('✅ Email sent successfully!');
-        console.log('   Message ID:', data?.id);
-      } catch (e: any) {
-        console.error('❌ Email sending failed:', e.message);
-        
-        let errorMessage = "Failed to send verification code";
-        if (e.message.includes('rate limit')) {
-          errorMessage = "Email service rate limit exceeded. Please try again later.";
-        } else if (e.message.includes('invalid')) {
-          errorMessage = "Invalid email configuration. Please contact support.";
-        }
-        
-        return res.status(500).json({ 
-          message: errorMessage,
-          debug: {
-            error: e.message,
-            service: 'Resend'
-          }
-        });
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      console.error('❌ Unexpected error:', error);
-      res.status(500).json({ message: "Failed to send verification code" });
-    }
-  });
-
-  // Verify email + code, create account if needed, and return JWT
-  app.post("/api/auth/verify-email-code", async (req: any, res) => {
-    try {
-      const { email, code } = verifyEmailCodeSchema.parse(req.body);
-      const entry = emailCodes.get(email);
-
-      if (!entry) {
-        return res.status(400).json({ message: "No code requested for this email" });
-      }
-      if (Date.now() > entry.expiresAt) {
-        emailCodes.delete(email);
-        return res.status(400).json({ message: "Code expired" });
-      }
-      if (entry.attempts >= 5) {
-        emailCodes.delete(email);
-        return res.status(429).json({ message: "Too many attempts. Request a new code." });
-      }
-      if (entry.code !== code) {
-        entry.attempts += 1;
-        emailCodes.set(email, entry);
-        return res.status(400).json({ message: "Invalid code" });
-      }
-
-      // Code is valid - consume it
-      emailCodes.delete(email);
-
-      // Find or create user
-      let user = await storage.getUserByEmail(email);
-      if (!user) {
-        // Generate a unique username based on email local part
-        const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 15) || 'user';
-        let candidate = base;
-        let counter = 1;
-        while (await storage.getUserByUsername(candidate)) {
-          const suffix = `_${counter}`;
-          candidate = (base + suffix).slice(0, 15);
-          counter++;
-        }
-
-        const hashedPassword = await bcrypt.hash("email-auth-placeholder", 10);
-        user = await storage.createUser({
-          username: candidate,
-          password: hashedPassword,
-          nickname: candidate,
-          email,
-          avatarColor: '#2196F3',
-          theme: 'light',
-          profileSetupComplete: false,
-        } as any);
-      }
-
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-      res.json({ token, userId: user.id, profileSetupComplete: user.profileSetupComplete });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      res.status(500).json({ message: "Verification failed" });
-    }
-  });
-
-  app.post("/api/auth/register", async (req: any, res) => {
-    try {
-      const data = insertUserSchema.parse(req.body);
-      
-      // Validate username length (excluding @ prefix which is handled on frontend)
-      if (data.username.length < 3 || data.username.length > 15) {
-        return res.status(400).json({ message: "Username must be between 3 and 15 characters" });
-      }
-      
-      const existingUser = await storage.getUserByUsername(data.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      // Optional nickname check
-      if (data.nickname) {
-        if (data.nickname.length < 2 || data.nickname.length > 20) {
-          return res.status(400).json({ message: "Nickname must be between 2 and 20 characters" });
-        }
-        
-        const existingNickname = await storage.getUserByNickname(data.nickname);
-        if (existingNickname) {
-          return res.status(400).json({ message: "Nickname already taken" });
-        }
-      }
-
-      const hashedPassword = await bcrypt.hash(data.password, 10);
-      const user = await storage.createUser({
-        ...data,
-        password: hashedPassword,
-      });
-
-      // Broadcast new user to all connected clients
-      broadcastToAllClients({
-        type: 'user_added',
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          nickname: user.nickname,
-          avatarColor: user.avatarColor
-        }
-      });
-
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-
-      res.json({
-        token,
-        userId: user.id,
-        profileSetupComplete: user.profileSetupComplete,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      res.status(500).json({ message: "Registration failed" });
-    }
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const data = loginSchema.parse(req.body);
-      
-      const user = await storage.getUserByUsername(data.username);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const isValidPassword = await bcrypt.compare(data.password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-
-      res.json({
-        token,
-        userId: user.id,
-        profileSetupComplete: user.profileSetupComplete,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      res.status(500).json({ message: "Login failed" });
-    }
-  });
-
-  app.post("/api/auth/check-nickname", async (req, res) => {
-    try {
-      const { nickname } = req.body;
-      
-      // If no nickname is provided, return available
-      if (!nickname) {
-        return res.json({ available: true });
-      }
-
-      if (nickname.length < 2) {
-        return res.json({ available: false });
-      }
-
-      const existing = await storage.getUserByNickname(nickname);
-      res.json({ available: !existing });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to check nickname" });
-    }
-  });
 
   // Google OAuth Routes
   app.get("/api/auth/google", passport.authenticate('google', { 

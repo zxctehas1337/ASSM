@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FaGoogle, FaGithub } from "react-icons/fa";
 
 const benefits = [
@@ -17,7 +13,7 @@ const benefits = [
   {
     title: "Secure encryption",
     description: "Your conversations are protected with industry-standard security",
-    features: ["Email verification", "Secure sessions", "Privacy first"],
+    features: ["OAuth authentication", "Secure sessions", "Privacy first"],
   },
   {
     title: "Custom themes",
@@ -46,18 +42,6 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentBenefit, setCurrentBenefit] = useState(0);
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [isCodeSent, setIsCodeSent] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [resendIn, setResendIn] = useState(0);
-
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const t = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, [resendIn]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -99,36 +83,6 @@ export default function AuthPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      setError("");
-      if (!isCodeSent) {
-        await apiRequest("POST", "/api/auth/request-email-code", { email });
-        setIsCodeSent(true);
-        setResendIn(60);
-        toast({ title: "Code sent", description: "Check your email for the 6-digit code." });
-      } else {
-        const response = await apiRequest("POST", "/api/auth/verify-email-code", { email, code });
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("userId", response.userId);
-        if (response.profileSetupComplete) {
-          setLocation("/chat");
-        } else {
-          setLocation("/profile-setup");
-        }
-      }
-    } catch (error: any) {
-      const message = error.message || "Something went wrong";
-      setError(message);
-      toast({ title: "Error", description: message, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Black Background */}
@@ -161,93 +115,6 @@ export default function AuthPage() {
               Continue with GitHub
             </Button>
           </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/20" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-black px-2 text-gray-400">Or continue with email</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-auth">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-white">
-                Email
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-white/40"
-                placeholder="you@example.com"
-                data-testid="input-email"
-              />
-              {error && (
-                <p className="text-red-500 text-sm mt-1">{error}</p>
-              )}
-            </div>
-
-            {isCodeSent && (
-              <div className="space-y-2">
-                <Label htmlFor="code" className="text-white">
-                  Enter 6-digit code
-                </Label>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={code} onChange={setCode}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                      <InputOTPSlot index={1} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                      <InputOTPSlot index={2} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                      <InputOTPSlot index={3} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                      <InputOTPSlot index={4} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                      <InputOTPSlot index={5} className="bg-white/10 border-white/30 text-white focus:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/50" />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-              data-testid="button-submit"
-            >
-              {isLoading ? "Please wait..." : isCodeSent ? "Verify Code" : "Send Code"}
-            </Button>
-
-            {isCodeSent && (
-              <div className="text-center text-gray-400">
-                {resendIn > 0 ? (
-                  <span>Resend code in {resendIn}s</span>
-                ) : (
-                  <button
-                    type="button"
-                    className="hover:text-white transition-colors"
-                    onClick={async () => {
-                      try {
-                        setIsLoading(true);
-                        await apiRequest("POST", "/api/auth/request-email-code", { email });
-                        setResendIn(60);
-                        toast({ title: "Code re-sent", description: "Check your email again." });
-                      } catch (err: any) {
-                        toast({ title: "Error", description: err.message || "Failed to resend" , variant: "destructive"});
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    }}
-                  >
-                    Resend code
-                  </button>
-                )}
-              </div>
-            )}
-          </form>
         </div>
       </div>
 

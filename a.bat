@@ -9,4 +9,4 @@ for /f "tokens=1-2 delims=:" %%a in ('time /t') do (
 )
 
 git commit -m "Fix %date_% %time_%"
-git push origin main
+git push origin master
